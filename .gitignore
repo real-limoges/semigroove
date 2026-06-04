@@ -22,10 +22,17 @@ pom.xml.asc
 
 # IntelliJ
 .idea/
+!.idea/inspectionProfiles/
+!.idea/scopes/
 *.iml
 
 # Overtone vendored native binaries (downloaded by dep, not source)
 native/
+
+# Generated stub dylib for arm64 — regenerate with:
+#   mkdir -p resources/darwin-aarch64
+#   echo "" | clang -arch arm64 -dynamiclib -x c - -o resources/darwin-aarch64/libscsynth.dylib
+resources/darwin-aarch64/
 
 # OS noise
 .DS_Store
