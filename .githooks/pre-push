@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running tests before push..."
+clojure -X:test-ci
+
+echo "Tests passed."
