@@ -14,18 +14,29 @@ Successor to [funktor](../funktor) (Haskell). The design transfers; the implemen
 ## Boot
 
 ```bash
-# 1. Start scsynth (Overtone can boot it for you)
-clj
-user=> (use 'overtone.live)        ;; boots scsynth on 57110
+# 1. Start scsynth in a separate terminal
+/Applications/SuperCollider.app/Contents/Resources/scsynth -u 57110
+```
 
-# 2. Define an instrument
+```clojure
+# 2. In the REPL
+clj
+user=> (use 'overtone.core)
+user=> (connect-external-server 57110)
+
+# 3. Define an instrument
 user=> (definst tone [freq 440 amp 0.5]
          (* amp (env-gen (perc 0.01 0.3) :action FREE)
             (sin-osc freq)))
 
-# 3. Play
+# 4. Play
 user=> (tone 440)
 ```
+
+> **arm64 note:** Overtone 0.10.6 ships x86_64-only native libs. The repo includes
+> `resources/darwin-aarch64/libscsynth.dylib` (an empty stub) so JNA loads without error.
+> `connect-external-server` is the correct entry point on arm64 — the internal booter
+> needs symbols from the real dylib that SC 3.11+ no longer ships.
 
 That's it. No build step, no `:reload`, no foreign-store. Edit the file, eval the form, hear the change.
 

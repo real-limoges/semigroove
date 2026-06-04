@@ -1,0 +1,1 @@
+{:lint-as {overtone.sc.sclang/defsynth clojure.core/def}, :config-in-call {overtone.sc.sclang/defsynth {:ignore [:unresolved-symbol]}}}
