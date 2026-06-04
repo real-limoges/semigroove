@@ -26,4 +26,4 @@
                    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :replace-paths ["src" "test"]
    :exec-fn       cognitect.test-runner.api/test
-   :exec-args     {:namespace-regex ["cantor\\.core\\..*"]}}}}
+   :exec-args     {:dirs ["test/cantor/core"]}}}}
