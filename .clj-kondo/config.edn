@@ -1,0 +1,4 @@
+{:linters {:unused-private-var {:level :off}
+           :unused-binding    {:level :off}
+           :refer-all         {:level :off}
+           :redefined-var     {:level :off}}}

@@ -20,6 +20,19 @@ pom.xml.asc
 .lsp/.cache.db
 .calva/
 
+# IntelliJ
+.idea/
+*.iml
+
+# Overtone vendored native binaries (downloaded by dep, not source)
+native/
+
 # OS noise
 .DS_Store
+
+# docs/ ignored by default; force-include specific files with git add -f
 docs/
+!docs/architecture.md
+!docs/from-funktor.md
+
+CLAUDE.md

@@ -42,16 +42,27 @@ REPL                       Scheduler thread          scsynth (OS process)
   ├─ initial scheduler state                             │
   └─ (future ...) ────> scheduler loop                   │
                             │                            │
-                            │  every ~10ms:              │
-                            │   1. (System/nanoTime)     │
-                            │   2. pop due events ───────┼── /s_new freq amp ...
-                            │   3. query stream window   │   /n_set id gate 0
-                            │   4. enqueue new           │   /n_free id (steal)
-                            │   5. park                  │
-                            ▼                            ▼
-                        atom scheduler-state         scsynth voice pool
-                                                     EnvGen :action FREE
+                            │  every ~10ms, sending      │
+                            │  ahead by latency L:       │
+                            │   1. now=(System/nanoTime) │
+                            │   2. query stream window   │
+                            │      [cursor .. now+L+tick)│
+                            │   3. beats→secs at L offset│
+                            │   4. emit timestamped ─────┼── (at t)  /s_new freq amp
+                            │      OSC bundles ──────────┼── (at t') /n_set id gate 0
+                            │   5. advance cursor; park  │   /n_free id (steal)
+                            ▼                            ▼  scsynth fires each bundle
+                        atom scheduler-state         at its own timestamp; JVM
+                        (cursor, pending releases)   jitter within L is absorbed
 ```
+
+The scheduler **sends ahead**, not just-in-time. Each tick queries a window that
+reaches `L` (~100 ms) into the future, converts beats to seconds, and ships
+timestamped OSC bundles (`bundle-at`); `scsynth` plays each at its own timestamp.
+A just-in-time `/s_new` on each due event would instead re-expose every onset to
+JVM scheduling jitter — the bundle-ahead model is what makes timing audible-tight.
+`L` trades latency for jitter immunity: large enough to cover a GC pause and a few
+ticks, small enough that live MIDI/grid input still feels responsive.
 
 State coordination uses **atoms**, not Haskell TVars. STM-grade transactions weren't load-bearing in Funktor — single-writer atoms with `swap!` are simpler and equally correct here.
 
@@ -89,12 +100,22 @@ Convert to seconds only at the audio boundary (scheduler → OSC `bundle-at`).
 
 ```clojure
 ;; stream is just a function: arc -> seq of events
+
+(defn- ceil-beats
+  "Smallest integer >= r, in exact arithmetic — never coerces to double.
+   (Math/ceil would return a Double and silently break the Ratio invariant.)"
+  [r]
+  (let [t (long r)]                       ; truncates toward zero
+    (if (and (ratio? r) (pos? r)) (inc t) t)))
+
 (defn periodic [period value]
   (fn [{:keys [start end]}]
-    (for [n (range (Math/ceil start) end)]
-      {:whole {:start n :end (+ n period)}
-       :part  {:start n :end (+ n period)}
-       :value value})))
+    ;; first onset = smallest multiple of `period` that is >= start
+    (let [first-onset (* period (ceil-beats (/ start period)))]
+      (for [n (range first-onset end period)]  ; range stays exact with Ratio args
+        {:whole {:start n :end (+ n period)}
+         :part  {:start n :end (+ n period)}
+         :value value}))))
 ```
 
 Not a lazy seq. The scheduler asks "events whose `:part :start` falls in this arc" each tick and gets back exactly those. No materialization of unused future events.
@@ -119,7 +140,9 @@ Equivalent to Funktor's `PortMidi → TQueue → enqueueImmediate` pattern, but 
 
 ### No reload machinery
 
-This is the big one. Funktor needed `foreign-store` + `fsnotify` to survive GHCi `:reload`. **Clojure's REPL IS the live image** — `(defn play [...] ...)` redefines the var, the running scheduler thread keeps holding the same atom, and the next tick reads the new behavior. No persistence layer needed.
+This is the big one. Funktor needed `foreign-store` + `fsnotify` to survive GHCi `:reload`. **Clojure's REPL IS the live image** — redefining a `defn` rebinds its var in place while the scheduler thread keeps running. No persistence layer needed.
+
+**One hot-swap mechanism, though — and it goes through the atom, not the var.** The scheduler reads the current stream from `scheduler-state` every tick; it does *not* close over a stream var. To change what's playing you build the new stream and `swap!` it into `scheduler-state` — that's all `play`, `set-tempo`, grid commits, and the MIDI router do. So "re-eval the stream and hear it" is really "re-eval, then re-`play` (or commit) to swap the new value in." Closing over a stream var's *value* at `play`-time would make redefinition a silent no-op; reading from the atom is the model that also makes grid commits and MIDI routing uniform (they all just `swap!`).
 
 The entire `Funktor.Live.Reload` namespace simply does not have a Cantor equivalent.
 

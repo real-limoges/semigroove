@@ -59,12 +59,13 @@ These existed only to work around Haskell/GHC constraints. They have no Cantor e
 Each step ends with something audible.
 
 1. `cantor.core.types` + `cantor.core.stream` — Beat, Arc, Event, `periodic`. Test with `clojure.test`.
-2. Overtone boot + a simple `definst` — confirm scsynth round-trip.
-3. `cantor.audio` thin facade: `(play-stream stream)` → schedule events → spawn synths.
-4. Hot-swap: re-evaluating the stream var changes what's playing without stopping the scheduler.
-5. `cantor.hardware.midi` — MIDI keyboard plays the current timbre.
-6. `cantor.hardware.launchpad` — Mk3 boots into programmer mode, pads light up.
-7. `cantor.grid.binding` — Sequencer mode: pads toggle steps in a grid; commits hot-swap the stream.
-8. `cantor.live` — REPL helpers (`play`, `stop`, `set-tempo`, ...).
+2. **The algebra** — `cat` / `stack` / `slow` / `fast` and the arc transforms behind them (fractional cycles, querying a stretched/shifted window). Pure, no sound, fully unit-tested. This is the genuinely hard part and the place where being pure-and-testable pays off most; nail it before scsynth is in the picture so timing bugs can't hide behind audio.
+3. Overtone boot + a simple `definst` — confirm scsynth round-trip.
+4. `cantor.audio` thin facade: `(play-stream stream)` → schedule events → spawn synths. Sends timestamped bundles ahead by latency `L`, not just-in-time.
+5. Hot-swap: re-evaluate a stream and re-`play`/commit to `swap!` the new value into `scheduler-state` — the running scheduler reads the stream from the atom each tick, so playback changes without stopping. (It does *not* deref a stream var.)
+6. `cantor.hardware.midi` — MIDI keyboard plays the current timbre.
+7. `cantor.hardware.launchpad` — Mk3 boots into programmer mode, pads light up.
+8. `cantor.grid.binding` — Sequencer mode: pads toggle steps in a grid; commits `swap!` the new stream into `scheduler-state`.
+9. `cantor.live` — REPL helpers (`play`, `stop`, `set-tempo`, ...).
 
 Each of these was a Funktor "tier" too. Use the funktor repo's git log if you want to see how the original split landed, but plan to skip several intermediate steps that existed only to manage Haskell complexity.
