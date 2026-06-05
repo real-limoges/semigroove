@@ -1,17 +1,21 @@
 {:paths ["src" "resources"]
 
- :deps {org.clojure/clojure           {:mvn/version "1.12.0"}
-        org.clojure/core.async        {:mvn/version "1.6.681"}
+ :deps {org.clojure/clojure           {:mvn/version "1.12.4"}
+        org.clojure/core.async        {:mvn/version "1.10.870-alpha2"}
         overtone/overtone             {:mvn/version "0.16.3331"}
-        net.java.dev.jna/jna          {:mvn/version "5.14.0"}
-        net.java.dev.jna/jna-platform {:mvn/version "5.14.0"}}
+        net.java.dev.jna/jna          {:mvn/version "5.18.1"}
+        net.java.dev.jna/jna-platform {:mvn/version "5.18.1"}}
 
  :aliases
  {:dev
-  {:extra-paths ["dev"]}
+  {:extra-paths ["dev"]
+   :jvm-opts    ["--enable-native-access=ALL-UNNAMED"
+                 "--add-opens" "java.desktop/com.apple.eawt=ALL-UNNAMED"]}
 
   :test
   {:extra-paths ["test"]
+   :jvm-opts    ["--enable-native-access=ALL-UNNAMED"
+                 "--add-opens" "java.desktop/com.apple.eawt=ALL-UNNAMED"]
    :extra-deps  {io.github.cognitect-labs/test-runner
                  {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts   ["-m" "cognitect.test-runner"]
@@ -19,11 +23,15 @@
 
   ;; CI/pre-push alias: replaces deps entirely to exclude Overtone/JNA (x86_64 native libs
   ;; crash on arm64 at class-init time even when no test touches audio)
+  :format
+  {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.13.0"}}
+   :main-opts  ["-m" "cljfmt.main" "fix" "src" "test"]}
+
   :test-ci
-  {:replace-deps  {org.clojure/clojure    {:mvn/version "1.12.0"}
-                   org.clojure/core.async {:mvn/version "1.6.681"}
+  {:replace-deps  {org.clojure/clojure    {:mvn/version "1.12.4"}
+                   org.clojure/core.async {:mvn/version "1.10.870-alpha2"}
                    io.github.cognitect-labs/test-runner
                    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :replace-paths ["src" "test"]
    :exec-fn       cognitect.test-runner.api/test
-   :exec-args     {:dirs ["test/cantor/core"]}}}}
+   :exec-args     {:dirs ["test/cantor/core" "test/cantor/audio"]}}}}
