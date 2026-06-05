@@ -8,7 +8,7 @@ Successor to [funktor](../funktor) (Haskell). The design transfers; the implemen
 
 - **Clojure** (latest stable) — REPL is the live image; no hot-reload gymnastics.
 - **Overtone** — scsynth client, `defsynth` macro, OSC, MIDI, scheduling primitives.
-- **Calva** (VSCode) — editor with `Ctrl+Alt+C Enter` to eval top-level form.
+- **Cursive** (IntelliJ IDEA) — editor with REPL integration for interactive development.
 - **scsynth** — same SuperCollider server you used with funktor.
 
 ## Boot
