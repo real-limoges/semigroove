@@ -32,7 +32,7 @@
                          [{:time-nanos (beat->nanos start-n bpm (-> e :whole :start))
                            :type       :on
                            :pitch      (:value e)
-                           :vel        0.5}
+                           :vel        (get e :velocity 1.0)}
                           {:time-nanos (beat->nanos start-n bpm (-> e :whole :end))
                            :type       :off
                            :pitch      (:value e)}])

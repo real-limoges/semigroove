@@ -72,7 +72,7 @@
             e))))))
 
 
-;; Time Scaling 
+;; Time Scaling
 
 (defn slow
   "Stretch a stream by a factor of k. `(slow 2 s)` plays at half speed"
@@ -82,10 +82,10 @@
     (fn [arc]
       (let [inv-k (/ 1 k)]
         (->> (stream (t/scale-arc inv-k arc))
-             (map (fn [{:keys [whole part value]}]
-                    {:whole (t/scale-arc k whole)
-                     :part  (t/scale-arc k part)
-                     :value value})))))))
+             (map (fn [e]
+                    (-> e
+                        (update :whole #(t/scale-arc k %))
+                        (update :part  #(t/scale-arc k %))))))))))
 
 
 (defn fast

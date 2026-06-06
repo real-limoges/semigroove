@@ -21,13 +21,14 @@
 
 (defn event
   "An event whose :whole and :part are equal."
-  [arc value]
-  {:whole arc :part arc :value value})
+  ([arc value]          {:whole arc :part arc :value value :velocity 1.0})
+  ([arc value velocity] {:whole arc :part arc :value value :velocity (or velocity 1.0)}))
 
-(defn shift-event [offset {:keys [whole part value]}]
-  {:whole (shift-arc offset whole)
-   :part  (shift-arc offset part)
-   :value  value})
+
+(defn shift-event [offset e]
+  (-> e
+      (update :whole #(shift-arc offset %))
+      (update :part  #(shift-arc offset %))))
 
 ;; Helper for vector of pitches -> vector of events
 
@@ -36,6 +37,9 @@
    (notes [60 62 64] [[0,1) [1,2) [2,3))"
   [values]
   (vec
-   (map-indexed
-    (fn [i v] (event (arc i (inc i)) v))
-    values)))
+    (map-indexed
+      (fn [i v]
+        (if (map? v)
+          (event (arc i (inc i)) (:pitch v) (or (:vel v) (:velocity v)))
+          (event (arc i (inc i)) v)))
+      values)))

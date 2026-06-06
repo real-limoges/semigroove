@@ -6,28 +6,29 @@ Synthesis runs in `scsynth`. Clojure owns the pattern DSL, scheduler, REPL sessi
 
 ## Namespace Layers
 
-Each layer depends only on what's below it.
+Each layer depends only on what's below it. Layers marked *(planned)* are designed but not yet implemented.
 
 ```
-cantor.live                 REPL interface: play / stop / set-tempo / start-midi / start-launchpad
+cantor.live                 REPL interface: play / stop / set-tempo
+  │                         (start-midi / start-launchpad planned for M5/M6)
   │
   ├── cantor.audio.scheduler     wall-clock event scheduler + hot-swap
   │     │
-  │     └── cantor.audio         facade: open-device / note-on / note-off (wraps Overtone)
+  │     └── cantor.audio         facade: open! / note-on / note-off / release-all (wraps Overtone)
   │           │
-  │           └── synthdefs in   src/cantor/synthdefs.clj — defsynth forms
+  │           └── synthdefs in   src/cantor/synthdefs.clj — cantor-note defsynth
   │
-  ├── cantor.hardware.midi       MIDI input via overtone.midi + router (core.async chan)
+  ├── cantor.hardware.midi       (planned M5) MIDI input → core.async chan → scheduler swap!
   │
-  ├── cantor.hardware.launchpad  Mk3 SysEx; midi ↔ pad translation (pure)
+  ├── cantor.hardware.launchpad  (planned M6) Mk3 SysEx; midi ↔ pad translation (pure)
   │
-  ├── cantor.grid.binding        mode dispatcher: :sequencer / :instrument / :scene
+  ├── cantor.grid.binding        (planned M6) mode dispatcher: :sequencer / :instrument / :scene
   │     │
-  │     └── cantor.grid          pad / color / pad-action — pure data
+  │     └── cantor.grid          (planned M6) pad / color / pad-action — pure data
   │
-  └── cantor.core.stream         arc -> [event]; periodic / cat / stack / slow / fast
+  └── cantor.core.stream         arc -> [event]; periodic / cat / stack / slow / fast / shift
         │
-        └── cantor.core.types    beat (ratio), arc, event, pitch, velocity
+        └── cantor.core.types    beat (ratio), arc, event
 ```
 
 ## Runtime Model
@@ -71,18 +72,18 @@ State coordination uses **atoms**, not Haskell TVars. STM-grade transactions wer
 
 `cantor.audio` owns its own per-session state (active-voice map by pitch). Overtone gives us node objects directly; we may not even need a manual Pitch→NodeId map (TBD during implementation).
 
-### Process lifecycle (TBD)
+### Process lifecycle
 
-`cantor.audio` must register a JVM shutdown hook that stops scsynth cleanly:
+`cantor.audio/open!` registers a JVM shutdown hook on first call:
 
 ```clojure
 (.addShutdownHook (Runtime/getRuntime)
-  (Thread. #(overtone.core/kill-server)))
+  (Thread. ^Runnable (fn [] (kill-server))))
 ```
 
-Without it, a JVM crash (not a clean exit) leaves an orphaned scsynth holding the audio device and port 57110, and the next jack-in fails with a confusing "address in use" error. `pkill scsynth` is the manual recovery.
+The hook is guarded by a `compare-and-set!` on `hook-registered` so it fires at most once per JVM. Without it, a JVM crash leaves an orphaned scsynth holding port 57110; the next boot fails with "address in use". `pkill scsynth` is the manual recovery.
 
-Decide during step 3 of the build order (`cantor.audio` facade) whether the hook lives in `cantor.audio` (registered on first `(open!)`) or in `cantor.live` (registered on first `(play ...)`). The first is more honest about ownership; the second is simpler to reason about.
+The hook lives in `cantor.audio` (registered at `open!`) rather than `cantor.live` — the audio facade is the correct owner since it's what talks to the server.
 
 ## Key Design Decisions
 

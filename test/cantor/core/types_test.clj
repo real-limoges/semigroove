@@ -26,3 +26,17 @@
   (let [a (t/scale-arc 1/3 (t/arc 0 1))]
     (is (= 1/3 (:end a)))
     (is (ratio? (:end a)))))
+
+(deftest event-carries-velocity
+  (testing "explicit velocity round-trips"
+    (let [e (t/event (t/arc 0 1) 60 0.7)]
+      (is (= 0.7 (:velocity e)))))
+  (testing "default velocity is 1.0"
+    (let [e (t/event (t/arc 0 1) 60)]
+      (is (= 1.0 (:velocity e))))))
+
+(deftest notes-map-form
+  (testing "pitch+vel map propagates velocity"
+    (let [evs (t/notes [{:pitch 60 :vel 0.3} {:pitch 64 :vel 0.8}])]
+      (is (= 0.3 (:velocity (first evs))))
+      (is (= 0.8 (:velocity (second evs)))))))
