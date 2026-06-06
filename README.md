@@ -14,31 +14,38 @@ Successor to [funktor](../funktor) (Haskell). The design transfers; the implemen
 ## Boot
 
 ```bash
-# 1. Start scsynth in a separate terminal
-/Applications/SuperCollider.app/Contents/Resources/scsynth -u 57110
+# Start the REPL with dev helpers
+clj -A:dev
 ```
 
 ```clojure
-# 2. In the REPL
-clj
-user=> (use 'overtone.core)
-user=> (connect-external-server 57110)
+;; Boot scsynth and connect Overtone (spawns scsynth at port 57110)
+user=> (boot!)
 
-# 3. Define an instrument
-user=> (definst tone [freq 440 amp 0.5]
-         (* amp (env-gen (perc 0.01 0.3) :action FREE)
-            (sin-osc freq)))
+;; Require the live API
+user=> (require '[cantor.live :refer [play stop set-tempo]]
+               '[cantor.core.stream :as s]
+               '[cantor.core.types :as t])
 
-# 4. Play
-user=> (tone 440)
+;; Play a repeating arpeggio
+user=> (play (s/periodic 1 (t/notes [60 62 64])))
+
+;; Hot-swap the stream — no stop/restart needed
+user=> (play (s/periodic 1 (t/notes [60 63 67])))
+
+;; Adjust tempo on the fly
+user=> (set-tempo 140)
+
+;; Stop
+user=> (stop)
 ```
 
-> **arm64 note:** Overtone 0.10.6 ships x86_64-only native libs. The repo includes
+> **arm64 note:** Overtone 0.16.3331 ships x86_64-only native libs. The repo includes
 > `resources/darwin-aarch64/libscsynth.dylib` (an empty stub) so JNA loads without error.
-> `connect-external-server` is the correct entry point on arm64 — the internal booter
-> needs symbols from the real dylib that SC 3.11+ no longer ships.
+> `boot!` in `dev/user.clj` spawns the real `scsynth` binary directly and connects via
+> `connect-external-server` — the internal Overtone booter does not work on arm64.
 
-That's it. No build step, no `:reload`, no foreign-store. Edit the file, eval the form, hear the change.
+No build step, no `:reload`, no foreign-store. Edit a stream, re-`play` it, hear the change.
 
 ## Architecture
 
@@ -47,13 +54,14 @@ See `docs/architecture.md`. Layered design ported from Funktor with Clojure idio
 ## Repo layout
 
 ```
-src/cantor/                       Clojure source
-  core/                           Beat / Arc / Event / Stream primitives
-  audio/                          Overtone wrapper + scheduler
-  hardware/                       MIDI + Launchpad Mk3
-  grid/                           Pad ↔ grid model + mode dispatcher
-  live.clj                        REPL entry: play / stop / set-tempo / ...
-synthdefs/                        Reference .scd files (Overtone defsynths live in src/)
-docs/                             Architecture, lessons, design notes
+src/cantor/
+  core/                           Beat / Arc / Event / Stream — pure algebra
+  audio/                          Overtone facade (note-on/off, voice steal)
+  audio/scheduler.clj             Tick loop, beat cursor, lookahead window
+  synthdefs.clj                   cantor-note defsynth (ADSR, wave select, LPF)
+  live.clj                        REPL API: play / stop / set-tempo
+dev/
+  user.clj                        REPL-only: (boot!) spawns scsynth + connects
+docs/                             Architecture, roadmap, design notes
 test/cantor/                      clojure.test specs
 ```

@@ -50,3 +50,11 @@
                             (range steps))]
       (is (= (* 12 1/5) (:beat final)))
       (is (ratio? (:beat final))))))
+
+(deftest step-uses-event-velocity
+  (let [stream (s/periodic 1 (t/notes [{:pitch 60 :vel 0.3}]))
+        state  (assoc base-state :stream stream)
+        [_ due] (step state 0)
+        note-on (first (filter #(= :on (:type %)) due))]
+    (is (some? note-on) "expected a note-on action")
+    (is (= 0.3 (:vel note-on)) "step must use :velocity ,not 0.5")))
