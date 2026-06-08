@@ -25,6 +25,8 @@
          (atom {:device nil
                 :chan   nil}))
 
+(declare stop!)
+
 (defn start!
   "Opens a MIDI device and start the router.
    Calls (a/open!) to ensure scsynth is connected first.
