@@ -19,7 +19,9 @@
    :extra-deps  {io.github.cognitect-labs/test-runner
                  {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts   ["-m" "cognitect.test-runner"]
-   :exec-fn     cognitect.test-runner.api/test}
+   ;; cantor.test-runner/test wraps the api so it System/exits — Overtone starts
+   ;; non-daemon threads that otherwise hang `-X:test` after the suite passes.
+   :exec-fn     cantor.test-runner/run}
 
   ;; CI/pre-push alias: replaces deps entirely to exclude Overtone/JNA (x86_64 native libs
   ;; crash on arm64 at class-init time even when no test touches audio)
@@ -33,5 +35,6 @@
                    io.github.cognitect-labs/test-runner
                    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :replace-paths ["src" "test"]
-   :exec-fn       cognitect.test-runner.api/test
-   :exec-args     {:dirs ["test/cantor/core" "test/cantor/audio"]}}}}
+   ;; run-ci auto-discovers every test ns under test/ and skips only the
+   ;; Overtone-dependent denylist — so new pure-algebra tests need no edits here.
+   :exec-fn       cantor.test-runner/run-ci}}}

@@ -75,7 +75,7 @@
 ;; Time Scaling
 
 (defn slow
-  "Stretch a stream by a factor of k. `(slow 2 s)` plays at half speed"
+  "Stretch a stream by a factor of k. `(slow s 2)` plays at half speed"
   [stream k]
   (if-not (pos? k)
     (silence)

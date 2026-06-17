@@ -6,10 +6,15 @@
 (def ^:private scsynth
   "/Applications/SuperCollider.app/Contents/Resources/scsynth")
 
-(defn- wait-for-scsynth [port]
+(defn- wait-for-scsynth
+  "Block until scsynth has bound UDP `port`. scsynth listens on UDP, so we
+  detect readiness by trying to bind the port ourselves: a BindException
+  means scsynth already holds it. (A TCP probe never connects — scsynth opens
+  no TCP listener — so it would spin forever.)"
+  [port]
   (loop []
-    (when-not (try (doto (java.net.Socket. "localhost" port) .close) true
-                   (catch Exception _ false))
+    (when (try (doto (java.net.DatagramSocket. port) .close) true
+               (catch java.net.BindException _ false))
       (Thread/sleep 100)
       (recur))))
 
