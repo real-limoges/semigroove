@@ -2,14 +2,21 @@
   (:require [cantor.audio.scheduler :as sched]
             [cantor.audio :as a]
             [cantor.core.stream :as s]
+            [cantor.hardware.midi :as midi]
             [overtone.core :refer [at]]))
 
-(defn- nanos->ms [nanos]
-  (/ nanos 1e6))
+(defn- nanos->epoch-ms
+  "Map a scheduler timestamp (System/nanoTime monotonic clock) into the
+  epoch-millisecond domain Overtone's `at` expects. (target - nanoTime) is the
+  time-until-event; adding it to the current epoch ms yields the absolute wall
+  time at which the OSC bundle should fire."
+  [target-nanos]
+  (+ (System/currentTimeMillis)
+     (/ (- target-nanos (System/nanoTime)) 1e6)))
 
 (defn- fire-action!
   [{:keys [type pitch vel time-nanos]}]
-  (let [t (nanos->ms time-nanos)]
+  (let [t (nanos->epoch-ms time-nanos)]
     (case type
       :on  (at t (a/note-on  pitch vel))
       :off (at t (a/note-off pitch)))))
@@ -57,3 +64,32 @@
   [bpm]
   (swap! sched/scheduler-state assoc :tempo bpm)
   bpm)
+
+;; --- MIDI control surface (M7) ------------------------------------------------
+
+(defn list-midi-inputs
+  "Print connected MIDI input devices. Use a name substring with start-midi."
+  []
+  (let [devs (midi/list-inputs)]
+    (if (empty? devs)
+      (println "No MIDI input devices found.")
+      (doseq [{:keys [name description]} devs]
+        (println (str "  " name (when description (str "  (" description ")"))))))
+    devs))
+
+(defn start-midi
+  "Route a MIDI keyboard into the live pipeline. DEV is an optional name
+   substring (see list-midi-inputs). Boots a silent session first if nothing
+   is playing, since notes only sound while the tick-loop runs."
+  ([] (start-midi nil))
+  ([dev]
+   (when-not (:running @sched/scheduler-state)
+     (play (s/silence)))
+   (if dev (midi/start! dev) (midi/start!))
+   :midi-started))
+
+(defn stop-midi
+  "Tear down MIDI input. Leaves the audio session running."
+  []
+  (midi/stop!)
+  :midi-stopped)

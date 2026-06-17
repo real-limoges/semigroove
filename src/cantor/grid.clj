@@ -10,7 +10,7 @@
   (update grid step not))
 
 (defn grid->stream
-  "return sa 16-beat periodic stream. note-on each step
+  "returns a 16-beat periodic stream. note-on each step
    pitch is the midi pitch to fire; steps with false are silence"
   [grid pitch]
   (let [events (->> (map-indexed

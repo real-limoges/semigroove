@@ -2,7 +2,7 @@
   (:require [cantor.audio :as a]
             [cantor.audio.scheduler :as sched]
             [clojure.core.async :refer [chan put! go-loop <! close!]]
-            [overtone.midi :refer [midi-in midi-handle-events]]))
+            [overtone.midi :refer [midi-in midi-sources midi-handle-events]]))
 
 (defn midi->action
   "Converts overtone.midi event map to a scheduler action map or nil to ignore.
@@ -19,6 +19,12 @@
 
       :else nil)))
 
+(defn list-inputs
+  "Connected MIDI input devices, as [{:name :description}]. Use a :name
+   substring with start! to target one."
+  []
+  (mapv #(select-keys % [:name :description]) (midi-sources)))
+
 ;; lifecycle
 
 (defonce ^:private midi-state
@@ -28,14 +34,15 @@
 (declare stop!)
 
 (defn start!
-  "Opens a MIDI device and start the router.
-   Calls (a/open!) to ensure scsynth is connected first.
-   Without argument, it opens the first available device"
-  ([]     (start! nil))
+  "Open a MIDI input device and start the router. DEV is a name substring
+   (case-insensitive regex), matched against (list-inputs). With no argument
+   it picks the FIRST source by name — it never pops the Swing chooser that
+   bare (midi-in) would. Calls (a/open!) so scsynth is connected first."
+  ([] (start! (-> (midi-sources) first :name)))
   ([dev]
    (stop!)
    (a/open!)
-   (let [device (if dev (midi-in dev) (midi-in))
+   (let [device (midi-in dev)          ; dev is always a name string here
          ch     (chan 64)]
      (midi-handle-events device (fn [event] (put! ch event)))
      (reset! midi-state {:device device :chan ch})
