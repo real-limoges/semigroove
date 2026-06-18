@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture</title>
+<style>
+/* ============================================================================
+   house.css — the house style for local HTML docs across every repo.
+
+   One canonical stylesheet. Reference it from any page on this machine with:
+
+       <link rel="stylesheet" href="file:///Users/real/repositories/dotfiles/web/house.css">
+
+   Palette is Tokyonight, lifted verbatim from the dotfiles cheatsheets. This
+   file is a SUPERSET of those cheatsheets: the component classes they use
+   (ol.steps, .loop, .ns, .trouble, kbd, .lede, h1 .sub, .prompt) are carried
+   over unchanged, so an existing cheatsheet can drop its inline <style> and
+   link this instead with no visual change. The rest styles long-form markdown
+   (headings, code blocks, tables, blockquotes, task lists) and pandoc/
+   skylighting syntax-highlight tokens.
+   ============================================================================ */
+
+:root {
+  --bg:#1a1b26; --panel:#24283b; --fg:#c0caf5; --dim:#787c99;
+  --accent:#7aa2f7; --accent2:#bb9af7; --key:#e0af68; --line:#2f334d;
+  --good:#9ece6a; --warn:#f7768e;
+  --codebg:#15161e;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0; padding:2rem 1.25rem 4rem;
+  background:var(--bg); color:var(--fg);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+
+.wrap { max-width:820px; margin:0 auto; }
+
+/* ---- headings: document scale (palette kept; not the cheatsheet micro-h2) -- */
+
+h1 { font-size:1.7rem; line-height:1.25; margin:0 0 .6rem; color:#fff; font-weight:700; }
+h1 .sub { color:var(--accent); font-weight:600; }   /* cheatsheet subtitle span */
+
+h2 {
+  font-size:1.28rem; color:var(--accent2); font-weight:650;
+  margin:2.4rem 0 .9rem; padding-bottom:.3rem; border-bottom:1px solid var(--line);
+}
+h3 { font-size:1.06rem; color:var(--accent); font-weight:650; margin:1.8rem 0 .6rem; }
+h4 { font-size:.95rem;  color:var(--fg);     font-weight:700; margin:1.4rem 0 .5rem; }
+h5, h6 { font-size:.9rem; color:var(--dim); font-weight:700; text-transform:uppercase;
+         letter-spacing:.06em; margin:1.2rem 0 .4rem; }
+
+p { margin:.7rem 0; }
+.lede { color:var(--dim); margin:0 0 2rem; }   /* cheatsheet lede paragraph */
+
+/* ---- links ---------------------------------------------------------------- */
+
+a { color:var(--accent);
+    text-decoration:underline; text-decoration-color:rgba(122,162,247,.45);
+    text-underline-offset:2px; }
+a:hover { text-decoration-color:var(--accent); }
+
+/* ---- inline code & kbd ---------------------------------------------------- */
+/* Inline code is intentionally NEUTRAL (a soft chip), not accent-blue, so it
+   is never mistaken for a link — these docs are dense with both. */
+
+code {
+  background:#1f2335; color:#a9b1d6;
+  border:1px solid var(--line);
+  padding:.02rem .34rem; border-radius:4px;
+  font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+kbd {
+  display:inline-block; background:var(--codebg); color:var(--key);
+  border:1px solid #3b3f5c; border-bottom-width:2px; border-radius:5px;
+  padding:.05rem .42rem; font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:nowrap;
+}
+
+/* ---- code blocks ---------------------------------------------------------- */
+
+pre {
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:.9rem 1.1rem; margin:1rem 0; overflow-x:auto; line-height:1.5;
+}
+pre code {
+  background:none; border:none; color:var(--fg); padding:0; border-radius:0;
+  font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+/* pandoc wraps highlighted blocks as <pre class="sourceCode"> */
+pre.sourceCode { padding:.9rem 1.1rem; }
+code.sourceCode { white-space:pre; }
+.sourceCode a.sourceLine { color:inherit; text-decoration:none; }
+
+/* ---- blockquotes ---------------------------------------------------------- */
+
+blockquote {
+  margin:1rem 0; padding:.4rem 1rem; color:var(--dim);
+  border-left:3px solid var(--accent); background:rgba(122,162,247,.06);
+  border-radius:0 6px 6px 0;
+}
+blockquote p { margin:.4rem 0; }
+
+/* ---- lists ---------------------------------------------------------------- */
+
+ul, ol { margin:.7rem 0; padding-left:1.5rem; }
+li { margin:.3rem 0; }
+li > ul, li > ol { margin:.3rem 0; }
+
+/* GFM task lists */
+ul.task-list { list-style:none; padding-left:1.1rem; }
+li.task-list-item { margin:.3rem 0; }
+li.task-list-item input[type=checkbox] {
+  margin:0 .5rem 0 -.1rem; vertical-align:middle; accent-color:var(--good);
+}
+
+/* ---- tables --------------------------------------------------------------- */
+
+table { width:100%; border-collapse:collapse; margin:1.1rem 0; font-size:.94rem; }
+th, td {
+  text-align:left; padding:.5rem .7rem; border:1px solid var(--line);
+  vertical-align:top;
+}
+th { background:var(--panel); color:#fff; font-weight:650; }
+tr:nth-child(even) td { background:rgba(36,40,59,.45); }
+
+/* ---- rules, emphasis ------------------------------------------------------ */
+
+hr { border:none; border-top:1px solid var(--line); margin:2rem 0; }
+strong, b { color:#fff; }
+em { color:var(--fg); }
+
+/* ---- footer --------------------------------------------------------------- */
+
+footer { color:var(--dim); font-size:.78rem; margin-top:3rem; padding-top:1rem;
+         border-top:1px solid var(--line); text-align:center; }
+
+/* ============================================================================
+   Syntax highlighting — pandoc / skylighting token classes, mapped to palette.
+   (Block colors live here so the one stylesheet owns all styling.)
+   ============================================================================ */
+
+code span.co { color:var(--dim); font-style:italic; }              /* comment   */
+code span.do { color:var(--dim); font-style:italic; }              /* doc       */
+code span.an { color:var(--dim); }                                 /* annotation*/
+code span.st, code span.ch, code span.vs, code span.ss { color:var(--good); }   /* strings */
+code span.kw, code span.cf { color:var(--accent2); font-weight:600; }           /* keyword / controlflow */
+code span.fu, code span.bu { color:var(--accent); }               /* function / builtin */
+code span.dv, code span.fl, code span.bn, code span.dt { color:var(--key); }    /* numbers / datatypes */
+code span.cn { color:var(--key); }                                 /* constant  */
+code span.op { color:var(--accent); }                              /* operator  */
+code span.va { color:var(--fg); }                                  /* variable  */
+code span.at { color:var(--accent2); }                             /* attribute */
+code span.pp { color:var(--warn); }                                /* preprocessor */
+code span.er { color:var(--warn); font-weight:600; }               /* error     */
+code span.wa { color:var(--warn); }                                /* warning   */
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1 id="architecture">Architecture</h1>
+<p>Reference doc for Cantor's design. Ported from Funktor's
+<code>docs/architecture.md</code> with Clojure/Overtone idioms
+substituted. Read this before any structural change.</p>
+<p>Synthesis runs in <code>scsynth</code>. Clojure owns the pattern DSL,
+scheduler, REPL session, MIDI input, and Launchpad grid. Sample-level
+DSP is <code>scsynth</code>'s job.</p>
+<h2 id="namespace-layers">Namespace Layers</h2>
+<p>Each layer depends only on what's below it. Layers marked
+<em>(planned)</em> are designed but not yet implemented.</p>
+<pre><code>cantor.live                 REPL interface: play / stop / set-tempo
+  │                         (start-midi / start-launchpad planned for M5/M6)
+  │
+  ├── cantor.audio.scheduler     wall-clock event scheduler + hot-swap
+  │     │
+  │     └── cantor.audio         facade: open! / note-on / note-off / release-all (wraps Overtone)
+  │           │
+  │           └── synthdefs in   src/cantor/synthdefs.clj — cantor-note defsynth
+  │
+  ├── cantor.hardware.midi       (planned M5) MIDI input → core.async chan → scheduler swap!
+  │
+  ├── cantor.hardware.launchpad  (planned M6) Mk3 SysEx; midi ↔ pad translation (pure)
+  │
+  ├── cantor.grid.binding        (planned M6) mode dispatcher: :sequencer / :instrument / :scene
+  │     │
+  │     └── cantor.grid          (planned M6) pad / color / pad-action — pure data
+  │
+  └── cantor.core.stream         arc -&gt; [event]; periodic / cat / stack / slow / fast / shift
+        │
+        └── cantor.core.types    beat (ratio), arc, event</code></pre>
+<h2 id="runtime-model">Runtime Model</h2>
+<p>A <code>(play stream)</code> call boots one scheduler thread that
+talks to scsynth via Overtone's OSC layer.</p>
+<pre><code>REPL                       Scheduler thread          scsynth (OS process)
+─────────────────────────────────────────────────────────────────────────
+(play stream)
+  ├─ ensure scsynth via Overtone ────UDP socket────&gt; 127.0.0.1:57110
+  ├─ initial scheduler state                             │
+  └─ (future ...) ────&gt; scheduler loop                   │
+                            │                            │
+                            │  every ~10ms, sending      │
+                            │  ahead by latency L:       │
+                            │   1. now=(System/nanoTime) │
+                            │   2. query stream window   │
+                            │      [cursor .. now+L+tick)│
+                            │   3. beats→secs at L offset│
+                            │   4. emit timestamped ─────┼── (at t)  /s_new freq amp
+                            │      OSC bundles ──────────┼── (at t&#39;) /n_set id gate 0
+                            │   5. advance cursor; park  │   /n_free id (steal)
+                            ▼                            ▼  scsynth fires each bundle
+                        atom scheduler-state         at its own timestamp; JVM
+                        (cursor, pending releases)   jitter within L is absorbed</code></pre>
+<p>The scheduler <strong>sends ahead</strong>, not just-in-time. Each
+tick queries a window that reaches <code>L</code> (~100 ms) into the
+future, converts beats to seconds, and ships timestamped OSC bundles
+(<code>bundle-at</code>); <code>scsynth</code> plays each at its own
+timestamp. A just-in-time <code>/s_new</code> on each due event would
+instead re-expose every onset to JVM scheduling jitter — the
+bundle-ahead model is what makes timing audible-tight. <code>L</code>
+trades latency for jitter immunity: large enough to cover a GC pause and
+a few ticks, small enough that live MIDI/grid input still feels
+responsive.</p>
+<p>State coordination uses <strong>atoms</strong>, not Haskell TVars.
+STM-grade transactions weren't load-bearing in Funktor — single-writer
+atoms with <code>swap!</code> are simpler and equally correct here.</p>
+<ul>
+<li><strong><code>scheduler-state</code> (atom)</strong> — current
+stream, tempo, transport beat, pending events. Written by
+<code>play</code> / <code>set-tempo</code> (hot-swap), grid commits,
+MIDI router, and the scheduler loop.</li>
+<li><strong><code>live-state</code> (atom in
+<code>cantor.live</code>)</strong> — session handle. Survives REPL
+evaluations natively; no <code>foreign-store</code> equivalent
+needed.</li>
+</ul>
+<p><code>cantor.audio</code> owns its own per-session state
+(active-voice map by pitch). Overtone gives us node objects directly; we
+may not even need a manual Pitch→NodeId map (TBD during
+implementation).</p>
+<h3 id="process-lifecycle">Process lifecycle</h3>
+<p><code>cantor.audio/open!</code> registers a JVM shutdown hook on
+first call:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode clojure"><code class="sourceCode clojure"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(.addShutdownHook (Runtime/getRuntime)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (Thread. ^Runnable (<span class="kw">fn</span> [] (kill-server))))</span></code></pre></div>
+<p>The hook is guarded by a <code>compare-and-set!</code> on
+<code>hook-registered</code> so it fires at most once per JVM. Without
+it, a JVM crash leaves an orphaned scsynth holding port 57110; the next
+boot fails with "address in use". <code>pkill scsynth</code> is the
+manual recovery.</p>
+<p>The hook lives in <code>cantor.audio</code> (registered at
+<code>open!</code>) rather than <code>cantor.live</code> — the audio
+facade is the correct owner since it's what talks to the server.</p>
+<h2 id="key-design-decisions">Key Design Decisions</h2>
+<h3 id="native-ratios-for-beats">Native ratios for beats</h3>
+<p>Clojure has <code>clojure.lang.Ratio</code> built-in. Triplets are
+literally <code>1/3</code> in source code:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode clojure"><code class="sourceCode clojure"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="bu">def</span><span class="fu"> triplet-eighth </span><span class="fl">1/12</span>)   <span class="co">;; reads as a Ratio, not a Double</span></span></code></pre></div>
+<p>Convert to seconds only at the audio boundary (scheduler → OSC
+<code>bundle-at</code>).</p>
+<h3 id="stream-as-an-arc-indexed-query-function">Stream as an
+arc-indexed query function</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode clojure"><code class="sourceCode clojure"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; stream is just a function: arc -&gt; seq of events</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>(<span class="bu">defn-</span><span class="fu"> ceil-beats</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Smallest integer &gt;= r, in exact arithmetic — never coerces to double.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">   (Math/ceil would return a Double and silently break the Ratio invariant.)&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  [r]</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> [t (<span class="kw">long</span> r)]                       <span class="co">; truncates toward zero</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="kw">and</span> (<span class="kw">ratio?</span> r) (<span class="kw">pos?</span> r)) (<span class="kw">inc</span> t) t)))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>(<span class="bu">defn</span><span class="fu"> periodic </span>[period value]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">fn</span> [{<span class="at">:keys</span> [start end]}]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; first onset = smallest multiple of `period` that is &gt;= start</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> [first-onset (<span class="kw">*</span> period (ceil-beats (<span class="kw">/</span> start period)))]</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">for</span> [n (<span class="kw">range</span> first-onset end period)]  <span class="co">; range stays exact with Ratio args</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        {<span class="at">:whole</span> {<span class="at">:start</span> n <span class="at">:end</span> (<span class="kw">+</span> n period)}</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">:part</span>  {<span class="at">:start</span> n <span class="at">:end</span> (<span class="kw">+</span> n period)}</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>         <span class="at">:value</span> value}))))</span></code></pre></div>
+<p>Not a lazy seq. The scheduler asks "events whose
+<code>:part :start</code> falls in this arc" each tick and gets back
+exactly those. No materialization of unused future events.</p>
+<p>Smart constructors <code>periodic</code>, <code>cat</code>,
+<code>stack</code>, <code>slow</code>, <code>fast</code> mirror
+funktor's <code>Funktor.Core.Stream</code>. Port them; the algebra is
+the gem and it's language-independent.</p>
+<h3 id="synthesis-lives-in-scsynth">Synthesis lives in scsynth</h3>
+<p>Voice pool, oscillators, envelopes, filters all run inside
+<code>scsynth</code>. Overtone's <code>definst</code> /
+<code>defsynth</code> compiles Clojure → SuperCollider bytecode and
+ships it to the server. Cantor sends <code>(synth :freq f :amp a)</code>
+to spawn and <code>(ctl node :gate 0)</code> to release;
+<code>EnvGen :action FREE</code> runs the release tail and frees the
+node.</p>
+<p>We do <em>not</em> maintain Haskell-style
+<code>Funktor.Audio.Timbre</code> records — Overtone synth defs are
+first-class values, so a "timbre" is just a synth + a map of param
+overrides.</p>
+<h3 id="out-of-band-midi-routing">Out-of-band MIDI routing</h3>
+<p>MIDI input goes onto a <code>core.async</code> channel. A router
+thread takes from the channel and uses <code>swap!</code> on
+<code>scheduler-state</code> to enqueue immediate events. The scheduler
+tick never blocks on MIDI.</p>
+<p>Equivalent to Funktor's
+<code>PortMidi → TQueue → enqueueImmediate</code> pattern, but with
+<code>core.async/chan</code> instead of <code>STM TQueue</code>.</p>
+<h3 id="monotonic-clock">Monotonic clock</h3>
+<p><code>(System/nanoTime)</code> for scheduling. Immune to wall-clock
+jumps (NTP, DST).</p>
+<h3 id="no-reload-machinery">No reload machinery</h3>
+<p>This is the big one. Funktor needed <code>foreign-store</code> +
+<code>fsnotify</code> to survive GHCi <code>:reload</code>.
+<strong>Clojure's REPL IS the live image</strong> — redefining a
+<code>defn</code> rebinds its var in place while the scheduler thread
+keeps running. No persistence layer needed.</p>
+<p><strong>One hot-swap mechanism, though — and it goes through the
+atom, not the var.</strong> The scheduler reads the current stream from
+<code>scheduler-state</code> every tick; it does <em>not</em> close over
+a stream var. To change what's playing you build the new stream and
+<code>swap!</code> it into <code>scheduler-state</code> — that's all
+<code>play</code>, <code>set-tempo</code>, grid commits, and the MIDI
+router do. So "re-eval the stream and hear it" is really "re-eval, then
+re-<code>play</code> (or commit) to swap the new value in." Closing over
+a stream var's <em>value</em> at <code>play</code>-time would make
+redefinition a silent no-op; reading from the atom is the model that
+also makes grid commits and MIDI routing uniform (they all just
+<code>swap!</code>).</p>
+<p>The entire <code>Funktor.Live.Reload</code> namespace simply does not
+have a Cantor equivalent.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Boring Clojure: prefer <code>defn</code> + data over macros +
+protocols unless a macro genuinely earns its keep.</li>
+<li>One REPL session per work session — design assumes a long-running
+JVM. Don't add features that require restarting the JVM.</li>
+<li>Pure data flows downward; side effects only in
+<code>cantor.audio</code> and <code>cantor.hardware.*</code>.</li>
+<li>Every namespace gets a <code>test/cantor/.../X_test.clj</code> spec.
+<code>clojure.test</code> is enough — no need for kaocha/midje unless it
+earns its keep.</li>
+</ul>
+<footer>cantor · documentation</footer>
+</div>
+</body>
+</html>

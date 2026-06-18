@@ -37,6 +37,9 @@ resources/darwin-aarch64/
 # OS noise
 .DS_Store
 
+# Playwright MCP artifacts (screenshots, page snapshots, console logs)
+.playwright-mcp/
+
 # docs/ ignored by default; force-include specific files with git add -f
 docs/
 !docs/architecture.md
