@@ -1,4 +1,4 @@
-# Cantor
+# Semigroove
 
 Interactive music environment. Pattern DSL + wall-clock scheduler + MIDI/Launchpad binding in **Clojure**; synthesis runs in an external `scsynth` (SuperCollider) via **Overtone**.
 
@@ -23,9 +23,9 @@ clj -A:dev
 user=> (boot!)
 
 ;; Require the live API
-user=> (require '[cantor.live :refer [play stop set-tempo]]
-               '[cantor.core.stream :as s]
-               '[cantor.core.types :as t])
+user=> (require '[semigroove.live :refer [play stop set-tempo]]
+               '[semigroove.core.stream :as s]
+               '[semigroove.core.types :as t])
 
 ;; Play a repeating arpeggio
 user=> (play (s/periodic 1 (t/notes [60 62 64])))
@@ -54,14 +54,14 @@ See `docs/architecture.md`. Layered design ported from Funktor with Clojure idio
 ## Repo layout
 
 ```
-src/cantor/
+src/semigroove/
   core/                           Beat / Arc / Event / Stream — pure algebra
   audio/                          Overtone facade (note-on/off, voice steal)
   audio/scheduler.clj             Tick loop, beat cursor, lookahead window
-  synthdefs.clj                   cantor-note defsynth (ADSR, wave select, LPF)
+  synthdefs.clj                   semigroove-note defsynth (ADSR, wave select, LPF)
   live.clj                        REPL API: play / stop / set-tempo
 dev/
   user.clj                        REPL-only: (boot!) spawns scsynth + connects
 docs/                             Architecture, roadmap, design notes
-test/cantor/                      clojure.test specs
+test/semigroove/                      clojure.test specs
 ```
