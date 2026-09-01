@@ -40,10 +40,15 @@ resources/darwin-aarch64/
 # Playwright MCP artifacts (screenshots, page snapshots, console logs)
 .playwright-mcp/
 
-# docs/ ignored by default; force-include specific files with git add -f
+# docs/ is a local notes tree (markdown sources + state.yaml, plus notes-html
+# rendered *.html beside each source), ignored by default; force-include
+# specific files with git add -f
 docs/
-!docs/architecture.md
-!docs/from-funktor.md
 
 CLAUDE.md
 .claude
+
+# working notes and drafts; see docs/private-notes/README.md
+docs/private-notes/
+
+.dir-locals.el

@@ -4,4 +4,4 @@
            :redefined-var     {:level :off}}
  ; Overtone UGens (sin-osc, env-gen, etc.) are dynamically interned at runtime —
  ; suppress unresolved-symbol for this namespace only.
- :config-in-ns {cantor.synthdefs {:linters {:unresolved-symbol {:level :off}}}}}
+ :config-in-ns {semigroove.synthdefs {:linters {:unresolved-symbol {:level :off}}}}}
