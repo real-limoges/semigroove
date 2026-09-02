@@ -40,5 +40,8 @@
       (s/silence))))
 
 
-(defn rotate [n v]
+(defn rotate
+  "Rotate V left by N, wrapping; spins a Euclidean pattern onto a different
+   downbeat."
+  [n v]
   (vec (take (count v) (drop n (cycle v)))))

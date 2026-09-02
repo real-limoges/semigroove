@@ -3,15 +3,17 @@
             [semigroove.core.stream :as s]))
 
 (def empty-grid
-  "16 step boolean grid. initialized off"
+  "A 16-step boolean grid, every step off. The sequencer's blank slate."
   (vec (repeat 16 false)))
 
-(defn toggle-pad [grid step]
+(defn toggle-pad
+  "Flip one step on or off."
+  [grid step]
   (update grid step not))
 
 (defn grid->stream
-  "returns a 16-beat periodic stream. note-on each step
-   pitch is the midi pitch to fire; steps with false are silence"
+  "A 16-beat periodic stream that fires PITCH on every step that's on; off steps
+   are just silence. An all-off grid returns silence rather than an empty loop."
   [grid pitch]
   (let [events (->> (map-indexed
                      (fn [i active?]

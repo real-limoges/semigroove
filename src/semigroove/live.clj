@@ -15,13 +15,18 @@
      (/ (- target-nanos (System/nanoTime)) 1e6)))
 
 (defn- fire-action!
+  "Schedule one note action with Overtone's `at`, converting the scheduler's
+  monotonic-nanos timestamp into the wall-clock ms `at` expects."
   [{:keys [type pitch vel time-nanos]}]
   (let [t (nanos->epoch-ms time-nanos)]
     (case type
       :on  (at t (a/note-on  pitch vel))
       :off (at t (a/note-off pitch)))))
 
-(defn- tick-loop []
+(defn- tick-loop
+  "The scheduler heartbeat: pull everything due, fire it, sleep 10ms, and repeat
+  until :running goes false. Runs on its own future."
+  []
   (loop []
     (when (:running @sched/scheduler-state)
       (let [now      (System/nanoTime)

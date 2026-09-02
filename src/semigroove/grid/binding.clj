@@ -9,6 +9,9 @@
          :pitch 60}))
 
 (defn- pad-press-handler
+  "React to a pad press: toggle its step, repaint its LED, and push the new grid
+   to the live sequencer. Only the top two 8-pad rows count as steps; the rest of
+   the Launchpad (top row, right column, lower rows) is ignored."
   [event device]
   (let [note (:note event)
         {:keys [row col]} (lp/note->coord note)]
@@ -26,6 +29,9 @@
             (live/play (g/grid->stream grid pitch))))))))
 
 (defn start-launchpad!
+  "Wire up the Launchpad as a step sequencer for PITCH (middle C by default):
+   enter programmer mode, light the 16 step pads dim, and route pad presses
+   through pad-press-handler. Returns the MIDI-out device."
   ([] (start-launchpad! 60))
   ([pitch]
    (let [device (o/midi-out "Launchpad")] ; matches name from o/midi-sinks
