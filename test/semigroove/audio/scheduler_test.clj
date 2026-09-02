@@ -6,7 +6,9 @@
 
 (def base-state
   {:tempo         120
-   :stream        (s/silence)
+   :tracks        {}
+   :muted         #{}
+   :solo          #{}
    :beat          0
    :start-nanos   0
    :pending       []})
@@ -24,8 +26,8 @@
     (is (empty? due))))
 
 (deftest step-periodic-yields-note-on-and-off
-  (let [state    (assoc base-state
-                        :stream (s/periodic 1 (t/notes [60])))
+  (let [state    (assoc-in base-state
+                           [:tracks :t] (s/periodic 1 (t/notes [60])))
         [s' due] (step state 0)
         all      (concat due (:pending s'))]
     (is (= 2 (count all)) "one note-on + one note-off per event")
@@ -53,7 +55,7 @@
 
 (deftest step-uses-event-velocity
   (let [stream (s/periodic 1 (t/notes [{:pitch 60 :vel 0.3}]))
-        state  (assoc base-state :stream stream)
+        state  (assoc-in base-state [:tracks :t] stream)
         [_ due] (step state 0)
         note-on (first (filter #(= :on (:type %)) due))]
     (is (some? note-on) "expected a note-on action")

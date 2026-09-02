@@ -64,7 +64,6 @@
         L-beats      (/ bpm 600)
         hi           (+ lo L-beats)
         window       (t/arc lo hi)
-        events       (s/query (:stream state) window)
         start-n      (:start-nanos state)
         lookahead-ns (* 100 1000000)
         new-actions  (mapcat

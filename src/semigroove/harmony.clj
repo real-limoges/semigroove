@@ -4,8 +4,8 @@
 
 
 (def qualities
-  "semitone offsets above the root for each chord quality.
-:half-diminished and :minor7b5 are synonyms."
+  "Semitone offsets above the root for each chord quality. :half-diminished
+  and :minor7b5 are the same shape; I keep both names because I reach for both."
   {:major7          [0 4 7 11]
    :minor7          [0 3 7 10]
    :dominant7       [0 4 7 10]
@@ -17,8 +17,8 @@
    :sus2            [0 2 7]})
 
 (defn quality-intervals
-  "Interval vector for a chord-quality keyword (or nil if unknown).
-  (chord-tones {:root 60 :quality :major7}) => [60 64 67 71]"
+  "Interval vector for a chord-quality keyword, or nil if I don't know it.
+  (quality-intervals :major7) => [0 4 7 11]"
   [quality]
   (get qualities quality))
 
@@ -38,7 +38,7 @@
 
 
 (def scales
-  "Semitone offets above the tonic for the usual scales/modes"
+  "Semitone offsets above the tonic for the usual scales and modes."
   {:major               [0 2 4 5 7 9 11]
    :minor               [0 2 3 5 7 8 10]
    :dorian              [0 2 3 5 7 9 10]
@@ -62,7 +62,8 @@
     (mapv #(+ root %) intervals)))
 
 (defn arp-stream
-  "Arpeggiate a chord. Loops every (count tones) beats.
+  "Arpeggiate a chord, one tone per beat, looping every (count tones) beats.
+  The beats-per-note arg is ignored for now; the period is fixed at one beat.
   (arp-stream {:root 60 :quality :major7} 1) plays 60 64 67 71 on repeat"
   [chord _beats-per-note]
   (let [tones (chord-tones chord)]
@@ -71,8 +72,8 @@
       (s/silence))))
 
 (defn chord-stream
-  "Sound every chord tone simultaneously, sustained for PERIOD beats (and looped)
-  Block chord rather than arpeggiated"
+  "Sound every chord tone at once, sustained for PERIOD beats and looped.
+  A block chord rather than an arpeggio."
   [chord period]
   (let [tones (chord-tones chord)]
     (if (seq tones)
