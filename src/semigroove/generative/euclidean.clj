@@ -38,10 +38,3 @@
     (if (seq events)
       (s/periodic steps events)
       (s/silence))))
-
-
-(defn rotate
-  "Rotate V left by N, wrapping; spins a Euclidean pattern onto a different
-   downbeat."
-  [n v]
-  (vec (take (count v) (drop n (cycle v)))))

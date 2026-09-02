@@ -8,18 +8,6 @@
 
 ;; Bookkeeping (No Server Needed)
 
-(defn steal-voice
-  "Record node as the active voice for pitch. Returns [new-map prev-node] so the
-   caller can kill whatever was sounding. Steal only, never layer; one node per
-   pitch is the whole model."
-  [voice-map pitch node]
-  [(assoc voice-map pitch node) (get voice-map pitch)])
-
-(defn release-voice
-  "Forget pitch. Returns [new-map node] so the caller can gate the old node off."
-  [voice-map pitch]
-  [(dissoc voice-map pitch) (get voice-map pitch)])
-
 (defn velocity->amp
   "MIDI velocity to amplitude. Just a clamp to [0, 1] for now."
   [v]
