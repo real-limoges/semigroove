@@ -7,10 +7,9 @@
 (def rule110 110)  ; turing-complete
 
 (defn apply-rule
-  "Evaluate a Wolfram rule on a 3-cell neighborhood.
-   The bit pattern of RULE is indexed by (l c r) packed as (41+2c+r)
-   with 1 as the high bit.
-  (apply-rule 90 true false false => true)"
+  "Evaluate a Wolfram rule on a 3-cell neighborhood. The rule's bit pattern is
+   indexed by (l c r) packed as (4l + 2c + r), left cell as the high bit.
+   (apply-rule 90 true false false) => true"
   [rule l c r]
   (let [idx (+ (if l 4 0) (if c 2 0) (if r 1 0))]
     (bit-test rule idx)))
@@ -32,8 +31,8 @@
   (vec (take n (iterate (partial evolve rule) seed))))
 
 (defn center-seed
-  "A row of N cells with only the middle cell alive. Basically a filter
-  (center-seed 7 => [false false false true false false false])"
+  "A row of N cells with only the middle cell alive; the usual CA starting point.
+   (center-seed 7) => [false false false true false false false]"
   [n]
   (if (<= n 0)
     []
@@ -41,7 +40,7 @@
 
 (defn row->stream
   "Loop ROW as a unit-step stream: each live cell fires PITCH at its index,
-   dead cells are rests. Perioid = (count row) beats"
+   dead cells are rests. Period is (count row) beats."
   [pitch row]
   (let [events (->> (map-indexed
                      (fn [i alive]
@@ -56,7 +55,7 @@
 (defn ca-stream
   "Evolve RULE for ROWS generations from a center seed of COLS cells, then
    concatenate the rows in time. Each live cell fires the pitch at its column
-   index, cycling through PITCHES. Perioid = (* rows columns) beats"
+   index, cycling through PITCHES. Period is (* rows cols) beats."
   [rule rows cols pitches]
   (if (empty? pitches)
     (s/silence)
@@ -78,7 +77,7 @@
   (row->stream 60 (evolve rule (center-seed cols))))
 
 (defn ca-sequence
-  "One stream per generation - useful as scene content or whatnot."
+  "One stream per generation; handy as scene content or whatnot."
   [rule rows cols]
   (mapv #(row->stream 60 %) (generations rule rows (center-seed cols))))
 

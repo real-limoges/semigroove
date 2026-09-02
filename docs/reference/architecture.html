@@ -309,7 +309,7 @@ strong em, em strong { color: var(--warn); }
 </style>
 </head>
 <body>
-<nav class="docnav"><span class="set">reference</span><span class="here">architecture</span><a href="common-lisp-and-clojure.html">common lisp and clojure</a><a href="exciting-clojure.html">exciting clojure</a></nav>
+<nav class="docnav"><span class="set">documents</span><a href="../ROADMAP.html">ROADMAP</a><span class="here">architecture</span><a href="milestones/m11-implementation.html">m11 implementation</a></nav>
 <h1 id="architecture">Architecture</h1>
 <p>Reference doc for Semigroove&#39;s design. Ported from Funktor&#39;s
 <code>docs/architecture.md</code> with Clojure/Overtone idioms
@@ -318,10 +318,11 @@ substituted. Read this before any structural change.</p>
 scheduler, REPL session, MIDI input, and Launchpad grid. Sample-level
 DSP is <code>scsynth</code>&#39;s job.</p>
 <h2 id="namespace-layers">Namespace Layers</h2>
-<p>Each layer depends only on what&#39;s below it. Layers marked
-<em>(planned)</em> are designed but not yet implemented.</p>
-<pre><code>semigroove.live                 REPL interface: play / stop / set-tempo
-  │                         (start-midi / start-launchpad planned for M5/M6)
+<p>Each layer depends only on what&#39;s below it. Every layer below is
+implemented; features marked <em>(planned)</em> are designed but not yet
+built (the grid&#39;s instrument/scene modes, M15/M16).</p>
+<pre><code>semigroove.live                 REPL interface: play / stop / set-tempo / start-midi
+  │                         (start-launchpad lives in semigroove.grid.binding)
   │
   ├── semigroove.audio.scheduler     wall-clock event scheduler + hot-swap
   │     │
@@ -329,13 +330,13 @@ DSP is <code>scsynth</code>&#39;s job.</p>
   │           │
   │           └── synthdefs in   src/semigroove/synthdefs.clj — semigroove-note defsynth
   │
-  ├── semigroove.hardware.midi       (planned M5) MIDI input → core.async chan → scheduler swap!
+  ├── semigroove.hardware.midi       MIDI input → core.async chan → scheduler swap!
   │
-  ├── semigroove.hardware.launchpad  (planned M6) Mk3 SysEx; midi ↔ pad translation (pure)
+  ├── semigroove.hardware.launchpad  Mk3 SysEx; midi ↔ pad translation (pure)
   │
-  ├── semigroove.grid.binding        (planned M6) mode dispatcher: :sequencer / :instrument / :scene
+  ├── semigroove.grid.binding        sequencer-mode pad binding (:instrument / :scene modes planned, M15/M16)
   │     │
-  │     └── semigroove.grid          (planned M6) pad / color / pad-action — pure data
+  │     └── semigroove.grid          pad / color / pad-action — pure data
   │
   └── semigroove.core.stream         arc -&gt; [event]; periodic / cat / stack / slow / fast / shift
         │
@@ -439,8 +440,9 @@ the gem and it&#39;s language-independent.</p>
 <p>Voice pool, oscillators, envelopes, filters all run inside
 <code>scsynth</code>. Overtone&#39;s <code>definst</code> /
 <code>defsynth</code> compiles Clojure → SuperCollider bytecode and
-ships it to the server. Semigroove sends <code>(synth :freq f :amp a)</code>
-to spawn and <code>(ctl node :gate 0)</code> to release;
+ships it to the server. Semigroove sends
+<code>(synth :freq f :amp a)</code> to spawn and
+<code>(ctl node :gate 0)</code> to release;
 <code>EnvGen :action FREE</code> runs the release tail and frees the
 node.</p>
 <p>We do <em>not</em> maintain Haskell-style
@@ -487,10 +489,11 @@ constraint was Haskell&#39;s; it does not carry over here.)</li>
 <li>One REPL session per work session — design assumes a long-running
 JVM. Don&#39;t add features that require restarting the JVM.</li>
 <li>Pure data flows downward; side effects only in
-<code>semigroove.audio</code> and <code>semigroove.hardware.*</code>.</li>
-<li>Every namespace gets a <code>test/semigroove/.../X_test.clj</code> spec.
-<code>clojure.test</code> is enough — no need for kaocha/midje unless it
-earns its keep.</li>
+<code>semigroove.audio</code> and
+<code>semigroove.hardware.*</code>.</li>
+<li>Every namespace gets a <code>test/semigroove/.../X_test.clj</code>
+spec. <code>clojure.test</code> is enough — no need for kaocha/midje
+unless it earns its keep.</li>
 </ul>
 </body>
 </html>

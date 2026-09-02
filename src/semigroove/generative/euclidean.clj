@@ -38,7 +38,3 @@
     (if (seq events)
       (s/periodic steps events)
       (s/silence))))
-
-
-(defn rotate [n v]
-  (vec (take (count v) (drop n (cycle v)))))

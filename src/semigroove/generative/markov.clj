@@ -4,9 +4,9 @@
 
 (defn weighted-choice
   "Pick one next-state from PAIRS = [[weight state] ...] given ROLL in
-  [0, total). Weights do not need to sum to 1 - the roll is normlaized
-  by the caller. Pure and deterministic; the last pair is the catch-all.
-  (weighted-choice [[0.6 :a] [0.4 :b]] 0.5) => :a"
+   [0, total). Weights need not sum to 1; the caller normalizes the roll.
+   Pure and deterministic, and the last pair is the catch-all.
+   (weighted-choice [[0.6 :a] [0.4 :b]] 0.5) => :a"
   [pairs roll]
   (loop [r roll, ps pairs]
     (let [[[w s] & more] ps]
@@ -15,8 +15,8 @@
         (recur (- r w) more)))))
 
 (defn step
-  "One markov step from STATE. States with no outbound transitions stay put.
-  RNG is a java.utils.Random; the roll is normalized."
+  "One markov step from STATE. A state with no outbound transitions stays put.
+   RNG is a java.util.Random; the roll is normalized."
   [chain state ^java.util.Random rng]
   (let [outs (get chain state)]
     (if (seq outs)

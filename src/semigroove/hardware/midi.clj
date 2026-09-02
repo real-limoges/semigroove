@@ -36,7 +36,7 @@
 (defn start!
   "Open a MIDI input device and start the router. DEV is a name substring
    (case-insensitive regex), matched against (list-inputs). With no argument
-   it picks the FIRST source by name — it never pops the Swing chooser that
+   it picks the FIRST source by name; it never pops the Swing chooser that
    bare (midi-in) would. Calls (a/open!) so scsynth is connected first."
   ([] (start! (-> (midi-sources) first :name)))
   ([dev]

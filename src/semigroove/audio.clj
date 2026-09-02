@@ -2,28 +2,14 @@
   (:require [overtone.core :refer [boot-external-server kill-server server-connected? ctl kill midi->hz volume]]
             [semigroove.synthdefs :refer [semigroove-note]]))
 
-
 ;; One voice per (sounding) pith
 ;; Just need overtone nodes not raw ids
 (defonce ^:private voices (atom {}))
 
-
 ;; Bookkeeping (No Server Needed)
 
-(defn steal-voice
-  "Records teh node as the active voice for pitch
-  Ret: [new-map prev-node] where prev-node is being booted. Nil allowed
-  Steal only, no layering"
-  [voice-map pitch node]
-  [(assoc voice-map pitch node) (get voice-map pitch)])
-
-(defn release-voice
-  "Forgets the pitc. Returns [new-map node] so the caller can gate it off"
-  [voice-map pitch]
-  [(dissoc voice-map pitch) (get voice-map pitch)])
-
 (defn velocity->amp
-  "MIDI Velocity to Amplitude. Clamps (currently)"
+  "MIDI velocity to amplitude. Just a clamp to [0, 1] for now."
   [v]
   (-> v (max 0.0) (min 1.0)))
 
@@ -46,30 +32,37 @@
                       (Thread. ^Runnable (fn [] (kill-server)))))
   :ready)
 
-
 ;; Notes
 
 (defn note-on
-  "Start pitch at velocity. If pitch is already on, old voice is stolen (no release)"
-  [pitch velocity]
+  "Sound a pitch on a track, stealing any node already playing that pitch there.
+   Voices are keyed [track pitch], so the same pitch can ring on two tracks at
+   once but never twice on one."
+  [track pitch velocity]
   (let [node (semigroove-note :freq (midi->hz pitch)
-                          :amp (velocity->amp velocity)
-                          :gate 1)
-        [m' prev] (steal-voice @voices pitch node)]
-    (when prev (kill prev))
-    (reset! voices m')
+                              :amp  (velocity->amp velocity)
+                              :gate 1)
+        prev (get-in @voices [track pitch])]
+    (when prev (kill prev))                       ;; steal only within the same track
+    (swap! voices assoc-in [track pitch] node)
     nil))
 
 (defn note-off
-  "Release pitch, gate envelope to 0, doneAction FREE releases the node"
-  [pitch]
-  (let [[m' node] (release-voice @voices pitch)]
-    (when node (ctl node :gate 0))
-    (reset! voices m')
-    nil))
+  "Gate off a single pitch on a track and forget its voice."
+  [track pitch]
+  (when-let [node (get-in @voices [track pitch])]
+    (ctl node :gate 0)
+    (swap! voices update track dissoc pitch))
+  nil)
+
+(defn release-track
+  "Gate off every voice on one track and drop the track."
+  [track]
+  (doseq [[_ node] (get @voices track)] (ctl node :gate 0))
+  (swap! voices dissoc track))
 
 (defn release-all
-  "Gate every voice off (finish envelopes). This is the 'nice' version"
+  "Gate off every voice on every track. The panic button."
   []
-  (doseq [[_ node] @voices] (ctl node :gate 0))
+  (doseq [[_ pitches] @voices, [_ node] pitches] (ctl node :gate 0))
   (reset! voices {}))

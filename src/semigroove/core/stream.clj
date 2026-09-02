@@ -5,18 +5,21 @@
 ;; Helper
 
 (defn query
-  "Runs a stream over an arc. Sugar"
+  "Materialize the events a stream produces inside an arc. A stream is just a
+   function of an arc, so this is only sugar for calling it."
   [stream arc]
   (stream arc))
 
 ;; Construction
 
-(defn silence []
+(defn silence
+  "The empty stream: nothing, over any arc."
+  []
   (fn [_arc] []))
 
 (defn periodic
-  "Loop EVENTS every PERIOD beats forever.
-   Uses t/notes to build event vector from raw values"
+  "Loop a fixed event vector every period beats, forever. A period of zero or
+   less has nothing to repeat, so it collapses to silence."
   [period events]
   (if-not (pos? period)
     (silence)
@@ -41,19 +44,20 @@
          (map   #(t/shift-event offset %)))))
 
 (defn merge
-  "Layer exactly two streams together"
+  "Layer exactly two streams, their events interleaved in time order."
   [s1 s2]
   (fn [arc]
     (sort-by #(-> % :part :start)
              (concat (s1 arc) (s2 arc)))))
 
 (defn stack
-  "Layer N streams."
+  "Layer any number of streams, folding them together over silence."
   [streams]
   (reduce merge (silence) streams))
 
 (defn cat
-  "Concatenate streams"
+  "Play streams one after another, each getting a period-beat slot, cycling back
+   to the first once the list runs out."
   [streams period]
   (if (or (empty? streams) (not (pos? period)))
     (silence)

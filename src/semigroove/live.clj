@@ -15,13 +15,18 @@
      (/ (- target-nanos (System/nanoTime)) 1e6)))
 
 (defn- fire-action!
+  "Schedule one note action with Overtone's `at`, converting the scheduler's
+  monotonic-nanos timestamp into the wall-clock ms `at` expects."
   [{:keys [type pitch vel time-nanos]}]
   (let [t (nanos->epoch-ms time-nanos)]
     (case type
       :on  (at t (a/note-on  pitch vel))
       :off (at t (a/note-off pitch)))))
 
-(defn- tick-loop []
+(defn- tick-loop
+  "The scheduler heartbeat: pull everything due, fire it, sleep 10ms, and repeat
+  until :running goes false. Runs on its own future."
+  []
   (loop []
     (when (:running @sched/scheduler-state)
       (let [now      (System/nanoTime)
@@ -35,13 +40,16 @@
       (recur))))
 
 (defn play
-  "Installs the stream and (re)starts the scheduler.
-  Clears pending actions + releases all current voices first."
+  "Play STREAM as the whole session on the :main track, releasing every current
+  voice and resetting the transport first. This wipes any other tracks and the
+  mute/solo state; layer extra streams on afterward with add-track."
   [stream]
   (a/open!)
   (a/release-all)
   (swap! sched/scheduler-state assoc
-         :stream      stream
+         :tracks      {:main stream}
+         :muted       #{}
+         :solo        #{}
          :beat        0
          :start-nanos (System/nanoTime)
          :pending     [])
@@ -51,10 +59,11 @@
   :playing)
 
 (defn stop
-  "Releases all voices and swaps silence into the scheduler."
+  "Clear every track and release every voice. Leaves the tick-loop running, so
+  play picks straight back up."
   []
   (swap! sched/scheduler-state assoc
-         :stream  (s/silence)
+         :tracks  {}
          :pending [])
   (a/release-all)
   :stopped)
@@ -64,6 +73,51 @@
   [bpm]
   (swap! sched/scheduler-state assoc :tempo bpm)
   bpm)
+
+;; --- Tracks and mixer --------------------------------------------------------
+;; Pure state transformers live in semigroove.audio.scheduler; these are the
+;; imperative surface you drive by hand. The scheduler ones stay testable; the
+;; swapping and voice-gating happens here.
+
+(defn add-track
+  "Layer a named stream onto the running session, leaving the other tracks and
+  the transport alone. Replaces whatever was on NAME."
+  [name stream]
+  (swap! sched/scheduler-state sched/install-track name stream)
+  name)
+
+(defn drop-track
+  "Remove a named track and gate off whatever it was still sounding."
+  [name]
+  (a/release-track name)
+  (swap! sched/scheduler-state sched/remove-track name)
+  name)
+
+(defn mute
+  "Mute a track. Like a tempo change, it lands within the scheduler's lookahead
+  window; notes already queued up to ~100ms out still fire."
+  [track]
+  (swap! sched/scheduler-state sched/mute-track track)
+  track)
+
+(defn unmute
+  "Unmute a track; scheduling resumes on the next tick."
+  [track]
+  (swap! sched/scheduler-state sched/unmute-track track)
+  track)
+
+(defn solo
+  "Solo one track: everything else drops out until unsolo. Replaces any existing
+  solo rather than adding to it."
+  [track]
+  (swap! sched/scheduler-state sched/solo-track track)
+  track)
+
+(defn unsolo
+  "Clear the solo, so mutes decide again."
+  []
+  (swap! sched/scheduler-state sched/unsolo)
+  :unsoloed)
 
 ;; --- MIDI control surface (M7) ------------------------------------------------
 
