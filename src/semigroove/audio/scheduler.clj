@@ -43,7 +43,7 @@
   [{:keys [tracks muted solo]}]
   (cond
     (seq solo) (select-keys tracks solo)
-    :else      (apply assoc tracks muted)))
+    :else      (apply dissoc tracks muted)))
 
 (defn- events->actions [start-n bpm track events]
   (mapcat
