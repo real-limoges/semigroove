@@ -17,11 +17,11 @@
 (defn- fire-action!
   "Schedule one note action with Overtone's `at`, converting the scheduler's
   monotonic-nanos timestamp into the wall-clock ms `at` expects."
-  [{:keys [type pitch vel time-nanos]}]
+  [{:keys [type track controls note time-nanos]}]
   (let [t (nanos->epoch-ms time-nanos)]
     (case type
-      :on  (at t (a/note-on  pitch vel))
-      :off (at t (a/note-off pitch)))))
+      :on  (at t (a/note-on  track controls))
+      :off (at t (a/note-off track note)))))
 
 (defn- tick-loop
   "The scheduler heartbeat: pull everything due, fire it, sleep 10ms, and repeat
@@ -69,9 +69,9 @@
   :stopped)
 
 (defn set-tempo
-  "Changes BPM. Takes effect on the next tick. No restart."
+  "Changes BPM from the present beat on. Takes effect within the lookahead."
   [bpm]
-  (swap! sched/scheduler-state assoc :tempo bpm)
+  (swap! sched/scheduler-state sched/retempo bpm (System/nanoTime))
   bpm)
 
 ;; --- Tracks and mixer --------------------------------------------------------
@@ -94,8 +94,10 @@
   name)
 
 (defn mute
-  "Mute a track. Like a tempo change, it lands within the scheduler's lookahead
-  window; notes already queued up to ~100ms out still fire."
+  "Mute a track. Takes effect on the next tick (~10ms): the scheduler drops every
+  note-on on a muted track, including live input on the :midi track. Voices
+  already sounding ring until their own note-off, so muting mid-note never hangs
+  a voice."
   [track]
   (swap! sched/scheduler-state sched/mute-track track)
   track)

@@ -1,9 +1,8 @@
 (ns semigroove.core.types)
 
-
 ;; Arc: Half open interval [start, end)
 
-(defn arc 
+(defn arc
   "A half open interval [start, end)"
   [start end]
   {:start start :end end})
@@ -31,7 +30,6 @@
   ([arc value]          {:whole arc :part arc :value value :velocity 1.0})
   ([arc value velocity] {:whole arc :part arc :value value :velocity (or velocity 1.0)}))
 
-
 (defn shift-event
   "Slide an event forward by offset beats, moving :whole and :part together."
   [offset e]
@@ -43,12 +41,13 @@
 
 (defn notes
   "Lay a vector of values out one per beat: value i lands on arc [i, i+1). A bare
-   number is a pitch; a map carries its own :pitch and :vel (or :velocity)."
+   number is a pitch; a map is a control map ({:note 60 :gain 0.5 :cutoff 800})
+   and rides through untouched."
   [values]
-  (vec
-    (map-indexed
-      (fn [i v]
-        (if (map? v)
-          (event (arc i (inc i)) (:pitch v) (or (:vel v) (:velocity v)))
-          (event (arc i (inc i)) v)))
-      values)))
+  (vec (map-indexed (fn [i v] (event (arc i (inc i)) v)) values)))
+
+(defn controls
+  "Coerce an event value into a control map. A bare number is shorthand for
+   {:note n}, which keeps every pre-control-map stream playing unchanged."
+  [v]
+  (if (map? v) v {:note v}))

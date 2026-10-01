@@ -18,7 +18,7 @@
   (testing "notes build events as expected")
   (let [evs (t/notes [60 62 64])]
     (is (= 3 (count evs)))
-    (is (= [60 62 64](mapv :value evs)))
+    (is (= [60 62 64] (mapv :value evs)))
     (is (= [0 1 2] (mapv #(-> % :whole :start) evs)))))
 
 (deftest beats-stay-ratio
@@ -36,7 +36,14 @@
       (is (= 1.0 (:velocity e))))))
 
 (deftest notes-map-form
-  (testing "pitch+vel map propagates velocity"
-    (let [evs (t/notes [{:pitch 60 :vel 0.3} {:pitch 64 :vel 0.8}])]
-      (is (= 0.3 (:velocity (first evs))))
-      (is (= 0.8 (:velocity (second evs)))))))
+  (testing "a control map is the value, untouched"
+    (let [evs (t/notes [{:note 60 :gain 0.3} 64])]
+      (is (= [{:note 60 :gain 0.3} 64] (mapv :value evs)))
+      (is (= [0 1] (mapv #(-> % :whole :start) evs))))))
+
+(deftest controls-coercion
+  (is (= {:note 60} (t/controls 60)))
+  (is (= {:note 60 :gain 0.5} (t/controls {:note 60 :gain 0.5})))
+  (testing "notes keeps a full control map as the value"
+    (is (= {:note 60 :cutoff 800}
+           (:value (first (t/notes [{:note 60 :cutoff 800}])))))))

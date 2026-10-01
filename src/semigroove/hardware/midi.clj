@@ -4,18 +4,27 @@
             [clojure.core.async :refer [chan put! go-loop <! close!]]
             [overtone.midi :refer [midi-in midi-sources midi-handle-events]]))
 
+(def default-track
+  "Track live MIDI input plays on. Stamping every action with a real track name
+   is what lets keyboard voices steal, gate off, and get released independently
+   of the scheduled tracks; without it they key under nil and release-track,
+   drop-track, and remove-track's pending scrub can never find them."
+  :midi)
+
 (defn midi->action
-  "Converts overtone.midi event map to a scheduler action map or nil to ignore.
-  Returns {:time-nanos long :type :on/:off :pitch int :vel double}"
-  [{:keys [note velocity command]}]
+  "Converts an overtone.midi event map into a scheduler action on TRACK, or nil
+  to ignore. Same shape the scheduler emits: an :on carries
+  :controls {:note int :gain double}, an :off carries just :note."
+  [track {:keys [note velocity command]}]
   (let [now (System/nanoTime)]
     (cond
       (and (= command :note-on) (pos? velocity))
-      {:time-nanos now :type :on :pitch note :vel (/ velocity 127.0)}
+      {:time-nanos now :type :on :track track
+       :controls {:note note :gain (/ velocity 127.0)}}
 
       (or (= command :note-off)
           (and (= command :note-on) (zero? velocity)))
-      {:time-nanos now :type :off :pitch note}
+      {:time-nanos now :type :off :track track :note note}
 
       :else nil)))
 
@@ -37,9 +46,11 @@
   "Open a MIDI input device and start the router. DEV is a name substring
    (case-insensitive regex), matched against (list-inputs). With no argument
    it picks the FIRST source by name; it never pops the Swing chooser that
-   bare (midi-in) would. Calls (a/open!) so scsynth is connected first."
-  ([] (start! (-> (midi-sources) first :name)))
-  ([dev]
+   bare (midi-in) would. Calls (a/open!) so scsynth is connected first. Notes
+   play on TRACK, which defaults to `default-track`."
+  ([] (start! (-> (midi-sources) first :name) default-track))
+  ([dev] (start! dev default-track))
+  ([dev track]
    (stop!)
    (a/open!)
    (let [device (midi-in dev)          ; dev is always a name string here
@@ -48,7 +59,7 @@
      (reset! midi-state {:device device :chan ch})
      (go-loop []
               (when-let [ev (<! ch)]
-                (when-let [action (midi->action ev)]
+                (when-let [action (midi->action track ev)]
                   (swap! sched/scheduler-state update :pending conj action))
                 (recur)))
      :started)))

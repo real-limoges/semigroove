@@ -2,7 +2,7 @@
   (:require [overtone.core :refer [boot-external-server kill-server server-connected? ctl kill midi->hz volume]]
             [semigroove.synthdefs :refer [semigroove-note]]))
 
-;; One voice per (sounding) pith
+;; One voice per (sounding) pitch
 ;; Just need overtone nodes not raw ids
 (defonce ^:private voices (atom {}))
 
@@ -34,25 +34,26 @@
 
 ;; Notes
 
+(declare controls->synth-args)
+
 (defn note-on
-  "Sound a pitch on a track, stealing any node already playing that pitch there.
-   Voices are keyed [track pitch], so the same pitch can ring on two tracks at
-   once but never twice on one."
-  [track pitch velocity]
-  (let [node (semigroove-note :freq (midi->hz pitch)
-                              :amp  (velocity->amp velocity)
-                              :gate 1)
-        prev (get-in @voices [track pitch])]
+  "Sound a control map on a track, stealing any node already playing its :note
+   there. Voices are keyed [track note], so the same note can ring on two tracks
+   at once but never twice on one."
+  [track controls]
+  (let [note (:note controls)
+        node (apply semigroove-note (controls->synth-args controls))
+        prev (get-in @voices [track note])]
     (when prev (kill prev))                       ;; steal only within the same track
-    (swap! voices assoc-in [track pitch] node)
+    (swap! voices assoc-in [track note] node)
     nil))
 
 (defn note-off
-  "Gate off a single pitch on a track and forget its voice."
-  [track pitch]
-  (when-let [node (get-in @voices [track pitch])]
+  "Gate off a single note on a track and forget its voice."
+  [track note]
+  (when-let [node (get-in @voices [track note])]
     (ctl node :gate 0)
-    (swap! voices update track dissoc pitch))
+    (swap! voices update track dissoc note))
   nil)
 
 (defn release-track
@@ -66,3 +67,17 @@
   []
   (doseq [[_ pitches] @voices, [_ node] pitches] (ctl node :gate 0))
   (reset! voices {}))
+
+(def ^:private default-controls
+  {:gain 0.8 :pan 0.0 :wave 0 :cutoff 2000
+   :attack 0.01 :decay 0.1 :sustain 0.7 :release 0.3})
+
+(defn controls->synth-args
+  "Turn a control map into semigroove-note kwargs, filling gaps from
+   default-controls. The one place a control map is interpreted."
+  [c]
+  (let [{:keys [note gain pan wave cutoff attack decay sustain release]}
+        (clojure.core/merge default-controls c)]
+    ;; Clamp gain the way velocity->amp always did, so a stray :gain 3 can't blast.
+    [:freq (midi->hz note) :amp (velocity->amp gain) :pan pan :wave wave :cutoff cutoff
+     :attack attack :decay decay :sustain sustain :release release :gate 1]))
