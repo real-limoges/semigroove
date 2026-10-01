@@ -40,9 +40,9 @@ resources/darwin-aarch64/
 # Playwright MCP artifacts (screenshots, page snapshots, console logs)
 .playwright-mcp/
 
-# docs/ is a local notes tree (markdown sources + state.yaml, plus notes-html
-# rendered *.html beside each source), ignored by default; force-include
-# specific files with git add -f
+# docs/ is a local notes tree (markdown sources + state.yaml); generated HTML
+# lives under the docs/html/ shadow tree that notes-html --mirror builds, also
+# ignored. Ignored by default; force-include specific files with git add -f
 docs/
 
 CLAUDE.md

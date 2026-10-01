@@ -3,20 +3,22 @@
             [semigroove.hardware.midi :refer [midi->action]]))
 
 (deftest note-on-converts
-  (let [a (midi->action {:note 60 :velocity 100 :command :note-on :channel 0 })]
+  (let [a (midi->action :midi {:note 60 :velocity 100 :command :note-on :channel 0})]
     (is (= :on (:type a)))
-    (is (= 60 (:pitch a)))
-    (is (< 0.78 (:vel a) 0.79) "velocity 100/127 = 0.787")))
+    (is (= :midi (:track a)) "action must carry the track it plays on")
+    (is (= 60 (-> a :controls :note)))
+    (is (< 0.78 (-> a :controls :gain) 0.79) "velocity 100/127 = 0.787")))
 
 (deftest note-off-converts
-  (let [a (midi->action {:note 60 :velocity 0 :command :note-off :channel 0})]
+  (let [a (midi->action :midi {:note 60 :velocity 0 :command :note-off :channel 0})]
     (is (= :off (:type a)))
-    (is (= 60 (:pitch a)))))
+    (is (= :midi (:track a)) "action must carry the track it plays on")
+    (is (= 60 (:note a)))))
 
 (deftest note-on-velocity-zero-is-note-off
   (testing "common MIDI shorthand: note-on vel=0 means note-off"
-    (let [a (midi->action {:note 60 :velocity 0 :command :note-on :channel 0})]
+    (let [a (midi->action :midi {:note 60 :velocity 0 :command :note-on :channel 0})]
       (is (= :off (:type a))))))
 
 (deftest other-commands-return-nil
-  (is (nil? (midi->action {:command :control-change :note 64 :velocity 127 :channel 0}))))
+  (is (nil? (midi->action :midi {:command :control-change :note 64 :velocity 127 :channel 0}))))

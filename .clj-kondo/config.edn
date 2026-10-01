@@ -1,7 +1,16 @@
 {:linters {:unused-private-var {:level :off}
            :unused-binding    {:level :off}
            :refer-all         {:level :off}
-           :redefined-var     {:level :off}}
- ; Overtone UGens (sin-osc, env-gen, etc.) are dynamically interned at runtime —
- ; suppress unresolved-symbol for this namespace only.
- :config-in-ns {semigroove.synthdefs {:linters {:unresolved-symbol {:level :off}}}}}
+           :redefined-var     {:level :off}
+           ;; Overtone interns its whole public API at runtime with
+           ;; (overtone.api/immigrate-overtone-api), so clj-kondo cannot see any
+           ;; of these vars statically and flags every :refer/:as use as an
+           ;; unresolved-var. Exclude the two Overtone namespaces by name rather
+           ;; than blanking whole files, so genuine typos in our own code still
+           ;; get caught.
+           :unresolved-var    {:exclude [overtone.core overtone.midi]}}
+ ;; :refer :all pulls Overtone symbols in as bare (unqualified) names, which land
+ ;; under unresolved-symbol instead of unresolved-var; disable that one linter in
+ ;; just the namespaces that do it.
+ :config-in-ns {semigroove.synthdefs {:linters {:unresolved-symbol {:level :off}}}
+                user                 {:linters {:unresolved-symbol {:level :off}}}}}
