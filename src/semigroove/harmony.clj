@@ -2,7 +2,6 @@
   (:require [semigroove.core.types  :as t]
             [semigroove.core.stream :as s]))
 
-
 (def qualities
   "Semitone offsets above the root for each chord quality. :half-diminished
   and :minor7b5 are the same shape; I keep both names because I reach for both."
@@ -23,7 +22,7 @@
   (get qualities quality))
 
 (defn chord-symbol
- "Builds a chord symbol map.
+  "Builds a chord symbol map.
   (chord-symbol 60 :major7) => {:root 60 :quality :major7}"
   [root quality]
   {:root root :quality quality})
@@ -35,7 +34,6 @@
   (mapv #(+ root %) (quality-intervals quality)))
 
 ; scales
-
 
 (def scales
   "Semitone offsets above the tonic for the usual scales and modes."
@@ -81,3 +79,13 @@
        (mapv (fn [p] (s/periodic period [(t/event (t/arc 0 period) p)]))
              tones))
       (s/silence))))
+
+(defn scale-pitch
+  "The pitch DEGREE steps up from ROOT, up or down.
+  INTERVALS are entries of `scales`
+  (scale-pitch 60 [0 2 4 7 9] 5) => 72"
+  [root intervals degree]
+  (let [n (count intervals)]
+    (+ root
+       (* 12 (Math/floorDiv (long degree) (long n)))
+       (nth intervals (Math/floorMod (long degree) (long n))))))

@@ -1,5 +1,5 @@
 (ns semigroove.core.transform
-  "Pattern transforms (M14): stream -> stream combinators in the Tidal mold.
+  "Pattern transforms: stream -> stream combinators in the Tidal mold.
    Pure; every one returns a new stream function and never touches audio."
   (:require [semigroove.core.stream :as s]
             [semigroove.core.types :as t]))

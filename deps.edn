@@ -4,7 +4,10 @@
         org.clojure/core.async        {:mvn/version "1.10.870-alpha2"}
         overtone/overtone             {:mvn/version "0.16.3331"}
         net.java.dev.jna/jna          {:mvn/version "5.18.1"}
-        net.java.dev.jna/jna-platform {:mvn/version "5.18.1"}}
+        net.java.dev.jna/jna-platform {:mvn/version "5.18.1"}
+        ;; Java's own macOS MIDI driver silently drops outgoing SysEx, so the
+        ;; Launchpad never hears "enter programmer mode" without this one
+        uk.co.xfactory-librarians/coremidi4j {:mvn/version "1.6"}}
 
  :aliases
  {:dev
@@ -37,4 +40,9 @@
    :replace-paths ["src" "test"]
    ;; run-ci auto-discovers every test ns under test/ and skips only the
    ;; Overtone-dependent denylist — so new pure-algebra tests need no edits here.
-   :exec-fn       semigroove.test-runner/run-ci}}}
+   :exec-fn       semigroove.test-runner/run-ci}
+
+  :toddler
+  {:jvm-opts  ["--enable-native-access=ALL-UNNAMED"
+               "--add-opens" "java.desktop/com.apple.eawt=ALL-UNNAMED"]
+   :main-opts ["-m" "semigroove.toddler"]}}}

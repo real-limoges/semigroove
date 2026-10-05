@@ -87,3 +87,10 @@
   (let [starts (map first (vals-at (x/iter 1 3 one-note) 0 3))]   ;; shifts by thirds of a beat
     (is (some ratio? starts))
     (is (every? #(or (ratio? %) (integer? %)) starts))))
+
+(deftest nested-transforms-agree-when-built-together
+  ;; every and the rev it applies both capture *cycle* 2 at construction
+  (let [nested   (x/with-cycle 2 (x/every 2 x/rev four-note))
+        explicit (x/every 2 2 #(x/rev 2 %) four-note)]
+    (is (= [[0 62] [1 60] [2 64] [3 65] [4 62] [5 60]] (vals-at nested 0 6)))
+    (is (= (vals-at explicit 0 8) (vals-at nested 0 8)))))

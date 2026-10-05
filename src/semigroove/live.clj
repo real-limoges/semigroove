@@ -93,6 +93,11 @@
   (swap! sched/scheduler-state sched/remove-track name)
   name)
 
+(defn tracks
+  "The names of the tracks installed in the running session."
+  []
+  (keys (:tracks @sched/scheduler-state)))
+
 (defn mute
   "Mute a track. Takes effect on the next tick (~10ms): the scheduler drops every
   note-on on a muted track, including live input on the :midi track. Voices
