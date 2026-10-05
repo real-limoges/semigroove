@@ -75,3 +75,9 @@
     (is (= #{60 64 67 71} (set (map :value events))))
     (is (every? zero? (map #(-> % :part :start) events))
         "every tone starts on beat 0 of the cycle")))
+
+(deftest scale-pitch-carries-octaves
+  (is (= 60 (h/scale-pitch 60 [0 2 4 7 9] 0)))
+  (is (= 69 (h/scale-pitch 60 [0 2 4 7 9] 4)))
+  (is (= 72 (h/scale-pitch 60 [0 2 4 7 9] 5)))
+  (is (= 57 (h/scale-pitch 60 [0 2 4 7 9] -1))))
