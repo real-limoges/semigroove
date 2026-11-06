@@ -35,7 +35,7 @@
 (defn- render-mode!
   "Repaint the 8x8 and the mode buttons to match grid-state."
   [device]
-  (let [{:keys [mode grid scenes] :as state} @grid-state]
+  (let [{:keys [mode grid scenes locked] :as state} @grid-state]
     (doseq [row (range 8) col (range 8)]
       (lp/set-led! device (lp/coord->note row col) :off))
     (case mode
@@ -47,7 +47,10 @@
                     (lp/set-led! device (lp/coord->note row col)
                                  (g/slot-color scenes (g/rc->pad row col)))))
     (doseq [[button m] mode-buttons]
-      (lp/set-button-led! device button (if (= m mode) :mode :off)))))
+      (lp/set-button-led! device button (if (= m mode) :mode :off)))
+    ;; Safe mode indicator: steady green on bottom-right pad when locked
+    (when locked
+      (lp/set-led! device (lp/coord->note 7 7) :green))))
 
 (defn- repaint-if-showing!
   "Repaint when a Launchpad is attached and MODE is the one on screen."
@@ -74,7 +77,7 @@
                       (swap! grid-state assoc :held held')
                       (when evicted (a/note-off :grid evicted))
                       (a/note-on :grid (merge voice {:note pitch}))
-                      (lp/set-led! device note :press))
+                      (lp/set-led! device note :on))  ;; Brighter color when playing
       :release      (do (swap! grid-state update :held g/release-note pitch)
                         (a/note-off :grid pitch)
                         (lp/set-led! device note (g/field-color state row col)))
@@ -91,26 +94,74 @@
 
 ;; the dispatcher
 
-(defn- pad-handler [event device]
+(defn- handle-mode-button
+  "Handle function row button presses"
+  [device note edge]
+  (let [m (mode-buttons note)]
+    (if (:locked @grid-state)
+      ;; Cycle scales when locked
+      (when (= edge :press)
+        (let [scales [:major-pentatonic :minor-pentatonic :blues :major]
+              current-scale (:scale (:layout @grid-state))
+              next-scale (nth scales (mod (inc (.indexOf scales current-scale)) (count scales)))]
+          (swap! grid-state update-in [:layout :scale] (constantly next-scale))
+          (render-mode! device)))
+      ;; Normal mode switching when unlocked
+      (when (= edge :press)
+        (swap! grid-state g/press-mode-button m)
+        (render-mode! device)))))
+
+(defn- handle-mode-long-press
+  "Handle long-press reset on mode button (1s hold)"
+  [device edge]
+  (when (and (= edge :release) (get @grid-state :mode-press-time))
+    (let [hold-duration (- (System/nanoTime) (:mode-press-time @grid-state))]
+      (when (> hold-duration 1000000000)  ;; 1 second in nanoseconds
+        (swap! grid-state assoc :held [])
+        (a/release-all)
+        (render-mode! device)))))
+
+(defn- handle-volume-control
+  "Handle volume control on right column (col 8)"
+  [device edge]
+  (when (= edge :press)
+    (let [current-voice (:voice @grid-state)
+          current-gain (:gain current-voice)
+          new-gain (cond
+                   (<= current-gain 0.1) 0.1  ;; min
+                   (<= current-gain 0.3) 0.5  ;; medium
+                   (<= current-gain 0.7) 0.8  ;; high
+                   :else 0.1)  ;; cycle back to min
+          updated-voice (assoc current-voice :gain new-gain)]
+      (swap! grid-state assoc :voice updated-voice)
+      (render-mode! device))))
+
+(defn- pad-handler
+  "Main handler for all pad events"
+  [event device]
   (let [note              (:note event)
         {:keys [row col]} (lp/note->coord note)
         {:keys [edge]}    (g/classify-press event)]
     (cond
       (= edge :ignore) nil
 
-      ;; function row: mode select, on press only, unless locked
-      (= row 8) (when-let [m (and (= edge :press) (mode-buttons note))]
-                  (swap! grid-state g/press-mode-button m)
-                  (render-mode! device))
+      ;; Function row button
+      (= row 8)
+      (cond
+        (= edge :press) (handle-mode-button device note edge)
+        (= edge :release) (handle-mode-long-press device edge))
 
-      ;; the 8x8: route to the active mode
+      ;; Volume control (right column)
+      (and (= col 8) (= edge :press))
+      (handle-volume-control device edge)
+
+      ;; The 8x8 grid: route to active mode
       (and (<= 0 row 7) (<= 0 col 7))
       (case (:mode @grid-state)
         :sequencer  (handle-sequencer  device note row col edge)
         :instrument (handle-instrument device note row col edge)
         :scene      (handle-scene      device note row col edge))
 
-      ;; right column (col 8) is free for later
       :else nil)))
 
 (defn- safe-pad-handler
