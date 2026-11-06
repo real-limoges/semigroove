@@ -40,15 +40,12 @@ resources/darwin-aarch64/
 # Playwright MCP artifacts (screenshots, page snapshots, console logs)
 .playwright-mcp/
 
-# docs/ is a local notes tree (markdown sources + state.yaml); generated HTML
-# lives under the docs/html/ shadow tree that notes-html --mirror builds, also
-# ignored. Ignored by default; force-include specific files with git add -f
-docs/
+# docs/ is a private notes tree; only docs/reference/ is committed.
+# This also covers docs/html/, the generated html mirror.
+docs/*
+!docs/reference/
 
 CLAUDE.md
 .claude
-
-# working notes and drafts; see docs/private-notes/README.md
-docs/private-notes/
 
 .dir-locals.el

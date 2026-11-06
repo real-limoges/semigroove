@@ -2,7 +2,7 @@
 
 Interactive music environment. Pattern DSL + wall-clock scheduler + MIDI/Launchpad binding in **Clojure**; synthesis runs in an external `scsynth` (SuperCollider) via **Overtone**.
 
-Successor to [funktor](../funktor) (Haskell). The design transfers; the implementation does not. See `docs/from-funktor.md` for what to reuse and what to leave behind.
+Successor to funktor (Haskell). The design transfers; the implementation does not.
 
 ## Stack
 
@@ -49,7 +49,7 @@ No build step, no `:reload`, no foreign-store. Edit a stream, re-`play` it, hear
 
 ## Architecture
 
-See `docs/architecture.md`. Layered design ported from Funktor with Clojure idioms substituted (atoms for TVars, Overtone for hosc+PortMidi, namespaces for module hierarchy).
+See `docs/reference/internal/architecture.md`. Layered design ported from Funktor with Clojure idioms substituted (atoms for TVars, Overtone for hosc+PortMidi, namespaces for module hierarchy).
 
 ## Repo layout
 

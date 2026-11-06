@@ -13,8 +13,8 @@
    :locked      true
    :layout      {:base 48 :scale :major-pentatonic :row-step 1}  ;; C3 up to A5
    :palette     :rainbow
-   :voice       {:gain 0.3 :wave 3 :attack 0.02 :decay 0.2       ;; wave 3 = triangle
-                 :sustain 0.6 :release 0.8 :cutoff 1800}
+   :voice       {:gain 0.3 :wave 1 :attack 0.05 :decay 0.3       ;; wave 1 = sawtooth for richer tone
+                 :sustain 0.7 :release 0.6 :cutoff 4000}           ;; higher cutoff for brighter sound
    :max-voices  4})
 
 (defn- wait-for-launchpad
