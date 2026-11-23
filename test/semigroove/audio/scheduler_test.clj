@@ -179,6 +179,73 @@
         [_ fired] (run-ticks st 6000 60)]                        ;; the next 600 ms
     (is (some #(= :bass (:track %)) fired))))
 
+;; A stream that throws must not take the other tracks down with it.
+
+(defn- throwing-stream [_arc]
+  (throw (ex-info "bad stream" {})))
+
+(deftest a-throwing-track-is-dropped-and-reported
+  (let [state              (-> base-state
+                               (assoc-in [:tracks :good] (s/periodic 1 (t/notes [60])))
+                               (assoc-in [:tracks :bad] throwing-stream))
+        [s' due failed]    (step state 0)
+        all                (concat due (:pending s'))]
+    (is (= #{:bad} (set (keys failed))) "the failure names its track")
+    (is (= "bad stream" (.getMessage ^Exception (:bad failed))))
+    (is (not (contains? (:tracks s') :bad)) "the bad track is gone")
+    (is (contains? (:tracks s') :good) "the good track stays")
+    (is (some #(= :good (:track %)) all) "the good track still plays")
+    (is (= 1/5 (:beat s')) "the cursor still moves")))
+
+(deftest a-lazy-failure-is-caught-too
+  ;; the stream returns a lazy seq that throws only when realized
+  (let [lazy-bad (fn [_arc] (map (fn [_] (throw (ex-info "late" {}))) [1]))
+        [s' _ failed] (step (assoc-in base-state [:tracks :lazy] lazy-bad) 0)]
+    (is (contains? failed :lazy))
+    (is (empty? (:tracks s')))))
+
+(deftest a-clean-tick-reports-no-failures
+  (let [[_ _ failed] (step (assoc-in base-state [:tracks :t] (s/periodic 1 (t/notes [60]))) 0)]
+    (is (= {} failed))))
+
+;; advance! publishes with compare-and-set!, so a write that lands while a step
+;; is computing survives. Here the write happens inside the step itself: the
+;; stream adds a MIDI note-off to the atom the first time it is queried.
+
+(deftest advance-keeps-a-write-made-during-the-step
+  (let [state-atom (atom nil)
+        midi-off   {:time-nanos 5000000000 :type :off :track :midi :note 64}
+        wrote?     (atom false)
+        racing     (fn [arc]
+                     (when (compare-and-set! wrote? false true)
+                       (swap! state-atom update :pending conj midi-off))
+                     ((s/periodic 1 (t/notes [60])) arc))]
+    (reset! state-atom (assoc-in base-state [:tracks :t] racing))
+    (sched/advance! state-atom 0)
+    (is (some #(= midi-off %) (:pending @state-atom))
+        "the note-off written mid-step is still pending")
+    (is (= 1/5 (:beat @state-atom)) "the retried step still advanced the cursor")))
+
+(deftest advance-returns-what-step-fired
+  (let [state-atom    (atom (assoc base-state :pending [{:time-nanos 0 :type :off :track :t :note 60}]))
+        [due failed]  (sched/advance! state-atom 0)]
+    (is (= 1 (count due)))
+    (is (= {} failed))))
+
+;; Sessions and tempo
+
+(deftest start-session-resets-everything-but-the-tempo
+  (let [busy (assoc base-state :tempo 90 :beat 17 :muted #{:a} :solo #{:b}
+                    :pending [{:time-nanos 1}] :tracks {:a (s/silence)})
+        st   (sched/start-session busy (s/silence) 42)]
+    (is (= [:main] (keys (:tracks st))))
+    (is (= [0 42 [] #{} #{} true 90]
+           ((juxt :beat :start-nanos :pending :muted :solo :running :tempo) st)))))
+
+(deftest retempo-refuses-a-non-positive-bpm
+  (is (thrown? clojure.lang.ExceptionInfo (sched/retempo four-notes 0 0)))
+  (is (thrown? clojure.lang.ExceptionInfo (sched/retempo four-notes -10 0))))
+
 (deftest retempo-keeps-the-present
   (let [now  (* 7 1000000000)
         beat (sched/nanos->beat 0 120 now)

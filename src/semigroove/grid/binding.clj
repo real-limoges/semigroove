@@ -14,6 +14,7 @@
          :layout        {}
          :palette       :field
          :voice         {:gain 0.8}
+         :max-gain      0.8
          :max-voices    16
          :held          []
          :locked        false
@@ -69,19 +70,25 @@
         (lp/set-led! device note (if (get grid step) :on :dim))
         (live/add-track :seq (g/grid->stream grid pitch))))))  ;; swap, don't restart
 
-(defn- handle-instrument [device note row col edge]
-  (let [{:keys [layout voice max-voices held] :as state} @grid-state
-        pitch (g/pad->pitch row col layout)]
+(defn- handle-instrument
+  "Sound or release one pad on the :grid track. Held notes are keyed by pad, so
+   a release gates the pitch its press sounded even if the scale changed in
+   between. A press on a muted (or soloed-out) :grid track is still held, so its
+   release stays clean, but makes no sound."
+  [device note row col edge]
+  (let [{:keys [layout voice max-voices held] :as state} @grid-state]
     (case edge
-      :press        (let [[held' evicted] (g/admit-note held pitch max-voices)]
-                      (swap! grid-state assoc :held held')
-                      (when evicted (a/note-off :grid evicted))
-                      (a/note-on :grid (merge voice {:note pitch}))
-                      (lp/set-led! device note :on))  ;; Brighter color when playing
-      :release      (do (swap! grid-state update :held g/release-note pitch)
-                        (a/note-off :grid pitch)
-                        (lp/set-led! device note (g/field-color state row col)))
-      nil)))
+      :press   (let [pitch                          (g/pad->pitch row col layout)
+                     {held' :held silence :silence} (g/press-pad held note pitch max-voices)]
+                 (swap! grid-state assoc :held held')
+                 (doseq [p silence] (a/note-off :grid p))
+                 (when (sched/audible? @sched/scheduler-state :grid)
+                   (a/note-on :grid (merge voice {:note pitch})))
+                 (lp/set-led! device note :on))  ;; Brighter color when playing
+      :release (let [{held' :held silence :silence} (g/release-pad held note)]
+                 (swap! grid-state assoc :held held')
+                 (doseq [p silence] (a/note-off :grid p))
+                 (lp/set-led! device note (g/field-color state row col))))))
 
 (defn- handle-scene [device note row col edge]
   ;; press launches the pad's clip onto :scene; it loops until the next launch
@@ -94,47 +101,30 @@
 
 ;; the dispatcher
 
-(defn- handle-mode-button
-  "Handle function row button presses"
-  [device note edge]
-  (let [m (mode-buttons note)]
-    (if (:locked @grid-state)
-      ;; Cycle scales when locked
-      (when (= edge :press)
-        (let [scales [:major-pentatonic :minor-pentatonic :blues :major]
-              current-scale (:scale (:layout @grid-state))
-              next-scale (nth scales (mod (inc (.indexOf scales current-scale)) (count scales)))]
-          (swap! grid-state update-in [:layout :scale] (constantly next-scale))
-          (render-mode! device)))
-      ;; Normal mode switching when unlocked
-      (when (= edge :press)
-        (swap! grid-state g/press-mode-button m)
-        (render-mode! device)))))
+(defn- handle-mode-press
+  "A function-row button went down: start timing it, and switch mode when the
+   grid is unlocked and the button names one."
+  [device note]
+  (swap! grid-state g/mode-button-press (mode-buttons note) (System/nanoTime))
+  (render-mode! device))
 
-(defn- handle-mode-long-press
-  "Handle long-press reset on mode button (1s hold)"
-  [device edge]
-  (when (and (= edge :release) (get @grid-state :mode-press-time))
-    (let [hold-duration (- (System/nanoTime) (:mode-press-time @grid-state))]
-      (when (> hold-duration 1000000000)  ;; 1 second in nanoseconds
-        (swap! grid-state assoc :held [])
-        (a/release-all)
-        (render-mode! device)))))
+(defn- handle-mode-release
+  "A function-row button came up. A hold of a second or more releases every
+   voice; a tap on a locked grid moves to the next toddler scale."
+  [device]
+  (let [now     (System/nanoTime)
+        [old _] (swap-vals! grid-state #(first (g/mode-button-release % now)))
+        outcome (second (g/mode-button-release old now))]
+    (case outcome
+      :reset         (do (a/release-all) (render-mode! device))
+      :scale-changed (render-mode! device)
+      :nothing       nil)))
 
 (defn- handle-volume-control
-  "Handle volume control on right column (col 8)"
-  [device edge]
-  (when (= edge :press)
-    (let [current-voice (:voice @grid-state)
-          current-gain (:gain current-voice)
-          new-gain (cond
-                   (<= current-gain 0.1) 0.1  ;; min
-                   (<= current-gain 0.3) 0.5  ;; medium
-                   (<= current-gain 0.7) 0.8  ;; high
-                   :else 0.1)  ;; cycle back to min
-          updated-voice (assoc current-voice :gain new-gain)]
-      (swap! grid-state assoc :voice updated-voice)
-      (render-mode! device))))
+  "A volume-column press: one step up the gain ladder, wrapping at :max-gain."
+  [device]
+  (swap! grid-state g/press-volume)
+  (render-mode! device))
 
 (defn- pad-handler
   "Main handler for all pad events"
@@ -147,13 +137,13 @@
 
       ;; Function row button
       (= row 8)
-      (cond
-        (= edge :press) (handle-mode-button device note edge)
-        (= edge :release) (handle-mode-long-press device edge))
+      (case edge
+        :press   (handle-mode-press device note)
+        :release (handle-mode-release device))
 
       ;; Volume control (right column)
       (and (= col 8) (= edge :press))
-      (handle-volume-control device edge)
+      (handle-volume-control device)
 
       ;; The 8x8 grid: route to active mode
       (and (<= 0 row 7) (<= 0 col 7))

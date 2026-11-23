@@ -7,6 +7,9 @@
    as possible over STEPS using the Bjorklund algorithm.
    (euclidean 3 8) => [1 0 0 1 0 0 1 0]"
   [pulses steps]
+  (when-not (<= 0 pulses steps)
+    (throw (ex-info (str "euclidean needs 0 <= pulses <= steps, got " pulses " of " steps)
+                    {:pulses pulses :steps steps})))
   (loop [ones  (vec (repeat pulses [1]))
          zeros (vec (repeat (- steps pulses) [0]))]
     

@@ -16,6 +16,15 @@
   [beats & body]
   `(binding [*cycle* ~beats] ~@body))
 
+(defn- require-positive
+  "Throw unless every value in NAMED (a map of argument name to value) is
+   positive. Called while a transform is built, so a bad argument fails at the
+   REPL rather than later on the tick thread."
+  [named]
+  (doseq [[k v] named]
+    (when-not (pos? v)
+      (throw (ex-info (str (name k) " must be positive, got " v) named)))))
+
 (defn- floor-div [a b] (long (Math/floor (/ a b))))
 (defn- ceil-div  [a b] (long (Math/ceil  (/ a b))))
 
@@ -39,6 +48,7 @@
    dropped; nothing in semigroove produces one yet."
   ([s] (rev *cycle* s))
   ([cyc s]
+   (require-positive {:cycle cyc})
    (fn [arc]
      (per-cycle cyc arc
                 (fn [_i base]
@@ -55,6 +65,7 @@
    cycles the phrase walks through n rotations of itself."
   ([n s] (iter *cycle* n s))
   ([cyc n s]
+   (require-positive {:cycle cyc :n n})
    (fn [arc]
      (per-cycle cyc arc
                 (fn [i base]
@@ -65,6 +76,7 @@
   "Rotate which value sits in each slot by K, leaving every onset in place."
   ([k s] (rot *cycle* k s))
   ([cyc k s]
+   (require-positive {:cycle cyc})
    (fn [arc]
      (per-cycle cyc arc
                 (fn [_i base]
@@ -84,6 +96,7 @@
   "Apply f on every n-th cycle, starting with cycle 0."
   ([n f s] (every *cycle* n f s))
   ([cyc n f s]
+   (require-positive {:cycle cyc :n n})
    (let [fs (f s)]
      (fn [arc]
        (per-cycle cyc arc
@@ -95,6 +108,7 @@
   "Apply f on cycles where (cycle mod a) >= b."
   ([a b f s] (whenmod *cycle* a b f s))
   ([cyc a b f s]
+   (require-positive {:cycle cyc :a a})
    (let [fs (f s)]
      (fn [arc]
        (per-cycle cyc arc
@@ -106,6 +120,7 @@
   "Play s forward on even cycles and reversed on odd ones."
   ([s] (palindrome *cycle* s))
   ([cyc s]
+   (require-positive {:cycle cyc})
    (fn [arc]
      (per-cycle cyc arc
                 (fn [i base]

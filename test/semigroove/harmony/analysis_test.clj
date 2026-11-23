@@ -11,7 +11,8 @@
   (is (= :dominant7   (a/classify-intervals 4 7 10)))
   (is (= :minor7b5    (a/classify-intervals 3 6 10)))
   (is (= :diminished7 (a/classify-intervals 3 6 9)))
-  (is (= :augmented   (a/classify-intervals 4 8 11)))
+  (is (= :augmented-major7 (a/classify-intervals 4 8 11)))
+  (is (= :minor-major7     (a/classify-intervals 3 7 11)))
   (is (= :sus4        (a/classify-intervals 5 7 10)))
   (is (= :sus2        (a/classify-intervals 2 7 10)))
   (is (= :unknown     (a/classify-intervals 1 1 1)) "unknown triple falls back to :unknown"))
@@ -44,6 +45,13 @@
           {:root 69 :quality :minor7}
           {:root 71 :quality :minor7b5}]
          (a/chords-from-scale (:major h/scales) 60))))
+
+(deftest harmonize-harmonic-minor-keeps-every-seventh
+  (let [chords (a/chords-from-scale (:harmonic-minor h/scales) 60)]
+    (is (= :minor-major7     (:quality (nth chords 0))))
+    (is (= :augmented-major7 (:quality (nth chords 2))))
+    (is (every? #(= 4 (count (h/chord-tones %))) chords)
+        "every diatonic chord keeps all four tones")))
 
 (deftest harmonize-needs-a-heptatonic-scale
   (is (= [] (a/chords-from-scale (:major-pentatonic h/scales) 60))

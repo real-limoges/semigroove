@@ -61,7 +61,8 @@
     (= [third fifth seventh] [4 7 10]) :dominant7
     (= [third fifth seventh] [3 6 10]) :minor7b5
     (= [third fifth seventh] [3 6 9])  :diminished7
-    (= [third fifth seventh] [4 8 11]) :augmented
+    (= [third fifth seventh] [4 8 11]) :augmented-major7
+    (= [third fifth seventh] [3 7 11]) :minor-major7
     (= [third fifth] [5 7])            :sus4
     (= [third fifth] [2 7])            :sus2
     (= [third fifth] [3 6])            :half-diminished
