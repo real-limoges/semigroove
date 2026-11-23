@@ -82,13 +82,25 @@
          :type :off :note (:note c) :track track}]))
    events))
 
+(defn- track-actions
+  "The timed actions one track contributes over [lo, hi), as {:actions [...]},
+   or {:failed exception} when its stream throws. The actions are realized here,
+   inside the try, so a lazy stream can't throw later on the tick thread."
+  [start-n bpm lo hi track stream]
+  (try {:actions (doall (events->actions start-n bpm track (s/query stream (t/arc lo hi))))}
+       (catch Exception e {:failed e})))
+
 (defn step
-  "Pure scheduler tick. Returns [new-state due-actions].
+  "Pure scheduler tick. Returns [new-state due-actions failed].
    Queries every audible track over [cursor, beat at now + lookahead), moves
    the cursor to the end of that window, then splits pending into due (within
    the lookahead) and future. Due note-ons on a track that is not audible are
    dropped, so the mixer gates live input too; note-offs always pass, so muting
-   mid-note never leaves a voice hanging."
+   mid-note never leaves a voice hanging.
+
+   A track whose stream throws is removed from the new state and reported in
+   FAILED, a map of track name to exception, so one bad stream can't stop the
+   others. FAILED is {} on a clean tick."
   [state now-nanos]
   (let [bpm          (:tempo state)
         start-n      (:start-nanos state)
@@ -96,24 +108,59 @@
         ;; The window ends where the clock will be one lookahead from now, so the
         ;; cursor follows wall time; max keeps it from ever moving backward.
         hi           (max lo (nanos->beat start-n bpm (+ now-nanos lookahead-nanos)))
-        new-actions  (when (< lo hi)
-                       (mapcat
-                        (fn [[track stream]]
-                          (events->actions start-n bpm track (s/query stream (t/arc lo hi))))
-                        (audible-tracks state)))
-        all-pending  (sort-by :time-nanos (concat (:pending state) new-actions))
+        results      (if (< lo hi)
+                       (into {} (map (fn [[track stream]]
+                                       [track (track-actions start-n bpm lo hi track stream)]))
+                             (audible-tracks state))
+                       {})
+        failed       (into {} (keep (fn [[track r]] (when (contains? r :failed) [track (:failed r)])))
+                           results)
+        kept         (reduce remove-track state (keys failed))
+        new-actions  (mapcat :actions (vals results))
+        all-pending  (sort-by :time-nanos (concat (:pending kept) new-actions))
         cutoff       (+ now-nanos lookahead-nanos)
         [due future] (split-with #(<= (:time-nanos %) cutoff) all-pending)
-        due          (filterv #(or (not= :on (:type %)) (audible? state (:track %)))
+        due          (filterv #(or (not= :on (:type %)) (audible? kept (:track %)))
                               due)]
-    [(assoc state :beat hi :pending (vec future))
-     due]))
+    [(assoc kept :beat hi :pending (vec future))
+     due
+     failed]))
+
+(defn advance!
+  "Step the state in STATE-ATOM to NOW-NANOS and publish the result with one
+   compare-and-set!. When another thread wrote in between (a MIDI note, an
+   add-track or set-tempo from the REPL), this step is thrown away and rerun on
+   the newer value, so no write is ever lost. Returns [due failed] from the step
+   that was published."
+  [state-atom now-nanos]
+  (loop []
+    (let [old              @state-atom
+          [new due failed] (step old now-nanos)]
+      (if (compare-and-set! state-atom old new)
+        [due failed]
+        (recur)))))
+
+(defn start-session
+  "STATE reset to a fresh session playing STREAM alone on :main from NOW-NANOS:
+   beat 0, no mutes or solos, nothing pending, and :running true."
+  [state stream now-nanos]
+  (assoc state
+         :tracks      {:main stream}
+         :muted       #{}
+         :solo        #{}
+         :beat        0
+         :start-nanos now-nanos
+         :pending     []
+         :running     true))
 
 (defn retempo
   "Change tempo without moving the present. Re-anchors :start-nanos so the
    beat sounding at NOW-NANOS keeps its wall-clock time and every later beat is
-   spaced at the new BPM."
+   spaced at the new BPM. Refuses a BPM that isn't positive, since the clock
+   divides by it."
   [state bpm now-nanos]
+  (when-not (pos? bpm)
+    (throw (ex-info (str "tempo must be positive, got " bpm) {:bpm bpm})))
   (let [{:keys [start-nanos tempo]} state
         beat-now (nanos->beat start-nanos tempo now-nanos)]
     (assoc state

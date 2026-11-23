@@ -72,7 +72,12 @@ A `(play stream)` call boots one scheduler thread that talks to scsynth via Over
 
 The scheduler **sends ahead**, not just-in-time. Each tick queries a window that reaches `L` (~100 ms) into the future, converts beats to seconds, and ships timestamped OSC bundles (`bundle-at`); `scsynth` plays each at its own timestamp. A just-in-time `/s_new` on each due event would instead re-expose every onset to JVM scheduling jitter — the bundle-ahead model is what makes timing audible-tight. `L` trades latency for jitter immunity: large enough to cover a GC pause and a few ticks, small enough that live MIDI/grid input still feels responsive.
 
-State coordination uses **atoms**, not Haskell TVars. STM-grade transactions weren't load-bearing in Funktor — single-writer atoms with `swap!` are simpler and equally correct here.
+State coordination uses **atoms**, not Haskell TVars.
+STM-grade transactions weren't load-bearing in Funktor, and one atom per piece of state is simpler.
+`scheduler-state` has several writers (the tick loop, the REPL, the MIDI router, grid handlers), so every write publishes a whole new value.
+Most writers use `swap!`.
+The tick loop's step also returns the actions due, so `semigroove.audio.scheduler/advance!` publishes it with `compare-and-set!` and reruns the step when another write landed first; nothing written mid-tick is lost.
+A track whose stream throws is dropped by `step` and named on the REPL, and the other tracks keep playing.
 
 - **`scheduler-state` (atom)** — current stream, tempo, transport beat, pending events. Written by `play` / `set-tempo` (hot-swap), grid commits, MIDI router, and the scheduler loop.
 - **`live-state` (atom in `semigroove.live`)** — session handle. Survives REPL evaluations natively; no `foreign-store` equivalent needed.

@@ -23,21 +23,40 @@
       :on  (at t (a/note-on  track controls))
       :off (at t (a/note-off track note)))))
 
-(defn- tick-loop
-  "The scheduler heartbeat: pull everything due, fire it, sleep 10ms, and repeat
-  until :running goes false. Runs on its own future."
+(defn- drop-failed!
+  "Release the voices of every track the scheduler dropped because its stream
+  threw, and say which track and why. The scheduler has already removed them."
+  [failed]
+  (doseq [[track e] failed]
+    (a/release-track track)
+    (println "dropped track" track "because its stream threw:" (.getMessage ^Exception e))))
+
+(defn- tick
+  "One heartbeat: advance the scheduler to now, drop failed tracks, and fire
+  everything due."
   []
-  (loop []
-    (when (:running @sched/scheduler-state)
-      (let [now      (System/nanoTime)
-            [s' due] (sched/step @sched/scheduler-state now)]
-        (reset! sched/scheduler-state s')
-        (doseq [action due]
-          (try (fire-action! action)
-               (catch Exception e
-                 (println "scheduler fire-action! error:" (.getMessage e))))))
-      (Thread/sleep 10)
-      (recur))))
+  (let [[due failed] (sched/advance! sched/scheduler-state (System/nanoTime))]
+    (drop-failed! failed)
+    (doseq [action due]
+      (try (fire-action! action)
+           (catch Exception e
+             (println "scheduler fire-action! error:" (.getMessage e)))))))
+
+(defn- tick-loop
+  "The scheduler heartbeat: tick, sleep 10ms, and repeat until :running goes
+  false. Runs on its own future. If anything escapes a tick, the loop marks
+  itself stopped before it dies, so the next play starts a fresh one instead of
+  waiting on a loop that is gone."
+  []
+  (try
+    (loop []
+      (when (:running @sched/scheduler-state)
+        (tick)
+        (Thread/sleep 10)
+        (recur)))
+    (catch Throwable e
+      (swap! sched/scheduler-state assoc :running false)
+      (println "tick loop stopped:" (.getMessage e) "; call play to restart it"))))
 
 (defn play
   "Play STREAM as the whole session on the :main track, releasing every current
@@ -46,16 +65,11 @@
   [stream]
   (a/open!)
   (a/release-all)
-  (swap! sched/scheduler-state assoc
-         :tracks      {:main stream}
-         :muted       #{}
-         :solo        #{}
-         :beat        0
-         :start-nanos (System/nanoTime)
-         :pending     [])
-  (when-not (:running @sched/scheduler-state)
-    (swap! sched/scheduler-state assoc :running true)
-    (future (tick-loop)))
+  (let [[old _] (swap-vals! sched/scheduler-state sched/start-session stream (System/nanoTime))]
+    ;; One swap both resets the session and claims :running, so two callers
+    ;; racing here can't start two loops.
+    (when-not (:running old)
+      (future (tick-loop))))
   :playing)
 
 (defn stop

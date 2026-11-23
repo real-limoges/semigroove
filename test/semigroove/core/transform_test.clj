@@ -94,3 +94,13 @@
         explicit (x/every 2 2 #(x/rev 2 %) four-note)]
     (is (= [[0 62] [1 60] [2 64] [3 65] [4 62] [5 60]] (vals-at nested 0 6)))
     (is (= (vals-at explicit 0 8) (vals-at nested 0 8)))))
+
+(deftest bad-arguments-fail-when-built
+  ;; Each would otherwise divide by zero later, inside the scheduler's tick.
+  (is (thrown? clojure.lang.ExceptionInfo (x/every 0 x/rev two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/whenmod 0 1 x/rev two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/iter 0 two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/rev 0 two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/rot 0 1 two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/palindrome 0 two-note)))
+  (is (thrown? clojure.lang.ExceptionInfo (x/with-cycle 0 (x/rev two-note)))))

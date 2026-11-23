@@ -8,7 +8,7 @@ Successor to funktor (Haskell). The design transfers; the implementation does no
 
 - **Clojure** (latest stable) — REPL is the live image; no hot-reload gymnastics.
 - **Overtone** — scsynth client, `defsynth` macro, OSC, MIDI, scheduling primitives.
-- **Cursive** (IntelliJ IDEA) — editor with REPL integration for interactive development.
+- **Emacs + CIDER**: `.dir-locals.el` sets the `:dev` alias, so `cider-jack-in` gets `boot!` and the arm64 JVM options.
 - **scsynth** — same SuperCollider server you used with funktor.
 
 ## Boot
@@ -23,15 +23,18 @@ clj -A:dev
 user=> (boot!)
 
 ;; Require the live API
-user=> (require '[semigroove.live :refer [play stop set-tempo]]
+user=> (require '[semigroove.live :refer [play stop set-tempo add-track]]
                '[semigroove.core.stream :as s]
                '[semigroove.core.types :as t])
 
-;; Play a repeating arpeggio
-user=> (play (s/periodic 1 (t/notes [60 62 64])))
+;; Play a repeating arpeggio (play resets the session: beat 0, one :main track)
+user=> (play (s/periodic 3 (t/notes [60 62 64])))
 
-;; Hot-swap the stream — no stop/restart needed
-user=> (play (s/periodic 1 (t/notes [60 63 67])))
+;; Swap the stream without restarting the transport
+user=> (add-track :main (s/periodic 3 (t/notes [60 63 67])))
+
+;; Layer a second track
+user=> (add-track :bass (s/periodic 4 (t/notes [36])))
 
 ;; Adjust tempo on the fly
 user=> (set-tempo 140)
@@ -45,7 +48,9 @@ user=> (stop)
 > `boot!` in `dev/user.clj` spawns the real `scsynth` binary directly and connects via
 > `connect-external-server` — the internal Overtone booter does not work on arm64.
 
-No build step, no `:reload`, no foreign-store. Edit a stream, re-`play` it, hear the change.
+No build step, no `:reload`, no foreign-store. Edit a stream, `add-track` it, hear the change.
+
+For the toddler Launchpad, double-click `bin/toddler.command` or run `clj -M:toddler`.
 
 ## Architecture
 
@@ -55,11 +60,18 @@ See `docs/reference/internal/architecture.md`. Layered design ported from Funkto
 
 ```
 src/semigroove/
-  core/                           Beat / Arc / Event / Stream — pure algebra
-  audio/                          Overtone facade (note-on/off, voice steal)
-  audio/scheduler.clj             Tick loop, beat cursor, lookahead window
-  synthdefs.clj                   semigroove-note defsynth (ADSR, wave select, LPF)
-  live.clj                        REPL API: play / stop / set-tempo
+  core/                           Beat / Arc / Event / Stream, transforms: pure algebra
+  audio.clj                       Overtone facade (note-on/off, voice steal)
+  audio/scheduler.clj             Pure scheduler step, beat cursor, lookahead window
+  audio/server.clj                Spawn scsynth and connect (arm64)
+  synthdefs.clj                   semigroove-note, master-limiter
+  live.clj                        REPL API: play / stop / set-tempo / tracks / mixer
+  harmony.clj, harmony/           Chords, scales, voicing, analysis
+  generative/                     Euclidean, Markov, cellular automata
+  grid.clj, grid/binding.clj      Launchpad modes: pure state, then the wiring
+  hardware/                       MIDI input, Launchpad LEDs and SysEx
+  toddler.clj                     One-command toddler instrument
+  wait.clj                        Polling with a deadline
 dev/
   user.clj                        REPL-only: (boot!) spawns scsynth + connects
 docs/                             Architecture, roadmap, design notes

@@ -46,6 +46,11 @@
   (is (= [1 1 1 1 1] (euclidean 5 5))
       "(euclidean n n) is all ones"))
 
+(deftest impossible-patterns-are-refused
+  (is (thrown? clojure.lang.ExceptionInfo (euclidean 5 4)) "more pulses than steps")
+  (is (thrown? clojure.lang.ExceptionInfo (euclidean -1 4)) "negative pulses")
+  (is (thrown? clojure.lang.ExceptionInfo (euclid-stream 60 9 8))))
+
 
 ; stream integration
 

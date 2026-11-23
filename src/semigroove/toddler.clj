@@ -15,17 +15,22 @@
    :palette     :rainbow
    :voice       {:gain 0.3 :wave 1 :attack 0.05 :decay 0.3       ;; wave 1 = sawtooth for richer tone
                  :sustain 0.7 :release 0.6 :cutoff 4000}           ;; higher cutoff for brighter sound
+   :max-gain    0.5                                                ;; the volume column tops out here
    :max-voices  4})
 
 (defn- wait-for-launchpad
-  "Retry start-launchpad! every two seconds until a Launchpad shows up."
+  "Retry start-launchpad! every two seconds until a Launchpad shows up. Waiting
+   on a person to plug it in has no sensible deadline; each miss prints a line."
   []
   (loop []
     (or (binding/start-launchpad!)
         (do (Thread/sleep 2000) (recur)))))
 
 (defn -main [& _]
-  (server/boot!)
+  (try (server/boot!)
+       (catch clojure.lang.ExceptionInfo e
+         (println "Toddler mode could not start:" (.getMessage e))
+         (System/exit 1)))
   (master-limiter [:tail (o/foundation-safe-post-default-group)] :ceiling 0.5)
   (swap! binding/grid-state merge settings)
   (wait-for-launchpad)

@@ -12,6 +12,8 @@
    :diminished7     [0 3 6 9]
    :minor7b5        [0 3 6 10]
    :augmented       [0 4 8]
+   :augmented-major7 [0 4 8 11]
+   :minor-major7    [0 3 7 11]
    :sus4            [0 5 7]
    :sus2            [0 2 7]})
 
@@ -48,6 +50,7 @@
    :melodic-minor       [0 2 3 5 7 9 11]
    :major-pentatonic    [0 2 4 7 9]
    :minor-pentatonic    [0 3 5 7 10]
+   :blues               [0 3 5 6 7 10]
    :chromatic           [0 1 2 3 4 5 6 7 8 9 10 11]})
 
 (defn scale-tones

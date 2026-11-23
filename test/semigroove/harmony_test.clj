@@ -14,6 +14,8 @@
    :diminished7     [0 3 6 9]
    :minor7b5        [0 3 6 10]
    :augmented       [0 4 8]
+   :augmented-major7 [0 4 8 11]
+   :minor-major7    [0 3 7 11]
    :sus4            [0 5 7]
    :sus2            [0 2 7]})
 
